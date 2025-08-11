@@ -157,7 +157,8 @@ namespace Core.Helpers
                     if (end > start)
                     {
                         string borderWidthStr = formattingStr.Substring(start, end - start).Trim();
-                        int.TryParse(borderWidthStr, out int borderWidth);
+                        int borderWidth; // JAVÍTVA
+                        int.TryParse(borderWidthStr, out borderWidth);
                         options.BorderWidth = borderWidth;
                     }
                 }
@@ -170,7 +171,8 @@ namespace Core.Helpers
                     if (end > start)
                     {
                         string horizontalStr = formattingStr.Substring(start, end - start).Trim();
-                        bool.TryParse(horizontalStr, out bool horizontal);
+                        bool horizontal; // JAVÍTVA
+                        bool.TryParse(horizontalStr, out horizontal);
                         options.Horizontal = horizontal;
                     }
                 }
@@ -183,7 +185,8 @@ namespace Core.Helpers
                     if (end > start)
                     {
                         string stackedStr = formattingStr.Substring(start, end - start).Trim();
-                        bool.TryParse(stackedStr, out bool stacked);
+                        bool stacked; // JAVÍTVA
+                        bool.TryParse(stackedStr, out stacked);
                         options.Stacked = stacked;
                     }
                 }
@@ -242,7 +245,8 @@ namespace Core.Helpers
                     if (end > start)
                     {
                         string showPointsStr = formattingStr.Substring(start, end - start).Trim();
-                        bool.TryParse(showPointsStr, out bool showPoints);
+                        bool showPoints; // JAVÍTVA
+                        bool.TryParse(showPointsStr, out showPoints);
                         options.ShowPoints = showPoints;
                     }
                 }
@@ -255,7 +259,8 @@ namespace Core.Helpers
                     if (end > start)
                     {
                         string tensionStr = formattingStr.Substring(start, end - start).Trim();
-                        int.TryParse(tensionStr, out int tension);
+                        int tension; // JAVÍTVA
+                        int.TryParse(tensionStr, out tension);
                         options.Tension = tension;
                     }
                 }
@@ -319,7 +324,8 @@ namespace Core.Helpers
                     if (end > start)
                     {
                         string showLegendStr = formattingStr.Substring(start, end - start).Trim();
-                        bool.TryParse(showLegendStr, out bool showLegend);
+                        bool showLegend; // JAVÍTVA
+                        bool.TryParse(showLegendStr, out showLegend);
                         options.ShowLegend = showLegend;
                     }
                 }
@@ -332,7 +338,8 @@ namespace Core.Helpers
                     if (end > start)
                     {
                         string doughnutStr = formattingStr.Substring(start, end - start).Trim();
-                        bool.TryParse(doughnutStr, out bool isDoughnut);
+                        bool isDoughnut; // JAVÍTVA
+                        bool.TryParse(doughnutStr, out isDoughnut);
                         options.IsDoughnut = isDoughnut;
                     }
                 }
@@ -346,7 +353,8 @@ namespace Core.Helpers
                     if (end > start)
                     {
                         string showValuesStr = formattingStr.Substring(start, end - start).Trim();
-                        bool.TryParse(showValuesStr, out bool showValues);
+                        bool showValues; // JAVÍTVA
+                        bool.TryParse(showValuesStr, out showValues);
                         options.ShowValues = showValues;
                     }
                 }
@@ -359,7 +367,8 @@ namespace Core.Helpers
                     if (end > start)
                     {
                         string showPercentagesStr = formattingStr.Substring(start, end - start).Trim();
-                        bool.TryParse(showPercentagesStr, out bool showPercentages);
+                        bool showPercentages; // JAVÍTVA
+                        bool.TryParse(showPercentagesStr, out showPercentages);
                         options.ShowPercentages = showPercentages;
                     }
                 }
