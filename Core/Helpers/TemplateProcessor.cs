@@ -71,7 +71,9 @@ namespace Core.Helpers
                         var sqlParameters = new Dictionary<string, object>();
                         foreach (var paramName in queryParamNames)
                         {
-                            if (requestParameters.TryGetValue(paramName, out var value) && !string.IsNullOrEmpty(value))
+                            // JAVÍTVA: Régebbi C# verziókkal kompatibilis szintaxis
+                            string value;
+                            if (requestParameters.TryGetValue(paramName, out value) && !string.IsNullOrEmpty(value))
                             {
                                 sqlParameters[paramName] = value;
                             }
@@ -102,7 +104,7 @@ namespace Core.Helpers
             return processedContent;
         }
 
-private string RenderFilterComponent(Dictionary<string, string> instructions)
+        private string RenderFilterComponent(Dictionary<string, string> instructions)
         {
             // Get filter properties
             string filterId = instructions.ContainsKey("id")
