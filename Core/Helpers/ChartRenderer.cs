@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Globalization;
 using System.Linq;
 using System.Web;
 using Newtonsoft.Json;
@@ -18,14 +19,12 @@ namespace Core.Helpers
 
         public string RenderChart(DataTable data, Dictionary<string, string> instructions)
         {
-            // First, directly check if this is a filter component (by representation)
             if (instructions.ContainsKey("representation") &&
                 instructions["representation"].ToLower() == "filter")
             {
-                return RenderFilterComponent(data, instructions);
+                return RenderFilterComponent(instructions);
             }
 
-            // Continue with existing code...
             string representation = instructions.ContainsKey("representation")
                 ? instructions["representation"].ToLower()
                 : "table";
@@ -45,95 +44,12 @@ namespace Core.Helpers
             }
         }
 
-        public string RenderFilterComponent(DataTable data, Dictionary<string, string> instructions)
+        private double SafeConvertToDouble(object obj)
         {
-            // Get filter properties
-            string id = instructions.ContainsKey("id") ? instructions["id"] : "filter_" + Guid.NewGuid().ToString("N");
-            string name = instructions.ContainsKey("param") ? instructions["param"] :
-                         (instructions.ContainsKey("name") ? instructions["name"] : id);
-            string label = instructions.ContainsKey("label") ? instructions["label"] : name;
-            string defaultValue = instructions.ContainsKey("default") ? instructions["default"] : "";
-
-            // Get filter type
-            string filterType = instructions.ContainsKey("type") ? instructions["type"].ToLower() : "dropdown";
-
-            // Get affects attribute - which charts this filter affects
-            string affects = instructions.ContainsKey("affects") ? instructions["affects"] : "";
-
-            // Get the value and text field names from instructions
-            string valueField = instructions.ContainsKey("valueField") ? instructions["valueField"] : data.Columns[0].ColumnName;
-            string textField = instructions.ContainsKey("textField") ? instructions["textField"] :
-                              (instructions.ContainsKey("valueField") ? instructions["valueField"] : data.Columns[0].ColumnName);
-
-            // Ensure the fields exist in the data
-            if (!data.Columns.Contains(valueField) || !data.Columns.Contains(textField))
-            {
-                return $"<div class='alert alert-danger'>Error: Specified valueField '{valueField}' or textField '{textField}' not found in query results</div>";
-            }
-
-            // Build HTML based on the filter type
-            string html = $"<div class='filter-component'>\n";
-            html += $"  <label for='{id}' class='form-label'>{label}</label>\n";
-
-            switch (filterType)
-            {
-                case "dropdown":
-                    html += $"  <select id='{id}' name='{name}' class='form-control filter-dropdown'";
-
-                    // Add affects attribute if specified
-                    if (!string.IsNullOrEmpty(affects))
-                    {
-                        html += $" data-affects='{affects}'";
-                    }
-
-                    html += ">\n";
-
-                    // Add empty option
-                    bool isRequired = instructions.ContainsKey("required") &&
-                                     instructions["required"].ToLower() == "true";
-
-                    if (!isRequired)
-                    {
-                        html += $"    <option value=''>-- Select --</option>\n";
-                    }
-
-                    // Add options from query results
-                    foreach (DataRow row in data.Rows)
-                    {
-                        string value = row[valueField].ToString();
-                        string text = row[textField].ToString();
-
-                        // Check if this is the default value
-                        string selected = value == defaultValue ? " selected" : "";
-
-                        html += $"    <option value='{value}'{selected}>{text}</option>\n";
-                    }
-
-                    html += "  </select>\n";
-                    break;
-
-                // Other filter types could be implemented here...
-
-                default:
-                    // Default to dropdown
-                    html += $"  <select id='{id}' name='{name}' class='form-control'>\n";
-                    html += $"    <option value=''>-- Select --</option>\n";
-
-                    // Add options from query results
-                    foreach (DataRow row in data.Rows)
-                    {
-                        string value = row[valueField].ToString();
-                        string text = row[textField].ToString();
-                        html += $"    <option value='{value}'>{text}</option>\n";
-                    }
-
-                    html += "  </select>\n";
-                    break;
-            }
-
-            html += "</div>\n";
-
-            return html;
+            if (obj == null || obj == DBNull.Value) return 0;
+            double result;
+            double.TryParse(obj.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out result);
+            return result;
         }
 
         public string RenderDataTable(DataTable data, Dictionary<string, string> instructions)
@@ -143,121 +59,30 @@ namespace Core.Helpers
 
         public string RenderBarChart(DataTable data, Dictionary<string, string> instructions)
         {
-            // Create a unique ID for the chart
             string chartId = "barchart_" + Guid.NewGuid().ToString("N");
-
-            // Parse options from instructions
             var options = FormatParser.ParseBarChartOptions(instructions);
+            List<string> seriesColumns = instructions.ContainsKey("series") ? ChartHelpers.ParseArray(instructions["series"]) : new List<string> { data.Columns[1].ColumnName };
+            string groupByColumn = instructions.ContainsKey("groupBy") ? instructions["groupBy"] : null;
+            string legendsColumn = instructions.ContainsKey("legends") ? ChartHelpers.ParseArray(instructions["legends"]).FirstOrDefault() ?? data.Columns[0].ColumnName : data.Columns[0].ColumnName;
 
-            // Get series column names
-            List<string> seriesColumns = new List<string>();
-            if (instructions.ContainsKey("series"))
-            {
-                seriesColumns = ChartHelpers.ParseArray(instructions["series"]);
-            }
-            else
-            {
-                // Default to second column
-                seriesColumns.Add(data.Columns[1].ColumnName);
-            }
+            var columnIndices = ChartHelpers.GetColumnIndices(data, data.Columns.Cast<DataColumn>().Select(c => c.ColumnName).ToList());
+            int legendsColumnIndex = columnIndices.ContainsKey(legendsColumn) ? columnIndices[legendsColumn] : 0;
+            int groupByColumnIndex = !string.IsNullOrEmpty(groupByColumn) && columnIndices.ContainsKey(groupByColumn) ? columnIndices[groupByColumn] : -1;
 
-            // Check if we need to group by a column
-            string groupByColumn = null;
-            if (instructions.ContainsKey("groupBy"))
-            {
-                groupByColumn = instructions["groupBy"];
-            }
-
-            // Get legends (defaults to first column for labels on x-axis)
-            string legendsColumn = data.Columns[0].ColumnName;
-            if (instructions.ContainsKey("legends"))
-            {
-                var legends = ChartHelpers.ParseArray(instructions["legends"]);
-                if (legends.Any())
-                {
-                    legendsColumn = legends.First();
-                }
-            }
-
-            // Get column indices
-            int legendsColumnIndex = -1;
-            Dictionary<string, int> seriesColumnIndices = new Dictionary<string, int>();
-            int groupByColumnIndex = -1;
-
-            // Find legend column index
-            for (int i = 0; i < data.Columns.Count; i++)
-            {
-                if (data.Columns[i].ColumnName.Equals(legendsColumn, StringComparison.OrdinalIgnoreCase))
-                {
-                    legendsColumnIndex = i;
-                    break;
-                }
-            }
-
-            // Find series column indices
-            foreach (string seriesName in seriesColumns)
-            {
-                for (int i = 0; i < data.Columns.Count; i++)
-                {
-                    if (data.Columns[i].ColumnName.Equals(seriesName, StringComparison.OrdinalIgnoreCase))
-                    {
-                        seriesColumnIndices[seriesName] = i;
-                        break;
-                    }
-                }
-            }
-
-            // Find groupBy column index if specified
-            if (!string.IsNullOrEmpty(groupByColumn))
-            {
-                for (int i = 0; i < data.Columns.Count; i++)
-                {
-                    if (data.Columns[i].ColumnName.Equals(groupByColumn, StringComparison.OrdinalIgnoreCase))
-                    {
-                        groupByColumnIndex = i;
-                        break;
-                    }
-                }
-            }
-
-            // Get unique ORDERED labels for x-axis
             List<string> labels = ChartHelpers.GetUniqueOrderedLabels(data, legendsColumnIndex);
-
-            // Prepare datasets
             List<string> datasets = new List<string>();
 
-            // If groupBy is specified and valid
-            if (!string.IsNullOrEmpty(groupByColumn) && groupByColumnIndex != -1)
+            if (groupByColumnIndex != -1)
             {
-                // Get unique categories from groupBy column
-                List<string> uniqueCategories = data.AsEnumerable()
-                    .Select(row => row[groupByColumnIndex].ToString())
-                    .Distinct()
-                    .OrderBy(c => c)
-                    .ToList();
-
-                // For each series
-                int seriesIndex = 0;
+                List<string> uniqueCategories = data.AsEnumerable().Select(row => row[groupByColumnIndex].ToString()).Distinct().OrderBy(c => c).ToList();
+                int categoryIndex = 0;
                 foreach (string seriesName in seriesColumns)
                 {
-                    if (!seriesColumnIndices.ContainsKey(seriesName)) continue;
-
-                    int colIndex = seriesColumnIndices[seriesName];
-
-                    // For each category create a dataset
-                    int categoryIndex = 0;
+                    if (!columnIndices.ContainsKey(seriesName)) continue;
+                    int colIndex = columnIndices[seriesName];
                     foreach (string category in uniqueCategories)
                     {
-                        // Extract values for this category
-                        Dictionary<string, double> valuesByLegend = new Dictionary<string, double>();
-
-                        // Initialize all legends with zero value
-                        foreach (string legend in labels)
-                        {
-                            valuesByLegend[legend] = 0;
-                        }
-
-                        // Fill in actual values
+                        Dictionary<string, double> valuesByLegend = labels.ToDictionary(l => l, l => 0.0);
                         foreach (DataRow row in data.Rows)
                         {
                             if (row[groupByColumnIndex].ToString() == category)
@@ -265,1206 +90,313 @@ namespace Core.Helpers
                                 string legend = row[legendsColumnIndex].ToString();
                                 if (valuesByLegend.ContainsKey(legend))
                                 {
-                                    valuesByLegend[legend] = Convert.ToDouble(row[colIndex]);
+                                    valuesByLegend[legend] = SafeConvertToDouble(row[colIndex]);
                                 }
                             }
                         }
-
-                        // Extract ordered values based on labels
-                        List<double> values = new List<double>();
-                        foreach (string legend in labels)
-                        {
-                            values.Add(valuesByLegend[legend]);
-                        }
-
-                        // Use colors from the palette with cycling
+                        List<double> values = labels.Select(l => valuesByLegend[l]).ToList();
                         string backgroundColor = options.BackgroundColors[categoryIndex % options.BackgroundColors.Length];
                         string borderColor = options.BorderColors[categoryIndex % options.BorderColors.Length];
-
-                        // Custom colors from formatting
-                        if (instructions.ContainsKey("formatting"))
-                        {
-                            string formattingStr = instructions["formatting"];
-
-                            if (formattingStr.Contains($"backgroundColor{categoryIndex}:"))
-                            {
-                                int start = formattingStr.IndexOf($"backgroundColor{categoryIndex}:") + 15 + categoryIndex.ToString().Length;
-                                int end = formattingStr.IndexOf(",", start);
-                                if (end == -1) end = formattingStr.IndexOf("}", start);
-                                if (end > start)
-                                {
-                                    backgroundColor = formattingStr.Substring(start, end - start).Trim();
-                                    if (backgroundColor.StartsWith("\"") && backgroundColor.EndsWith("\""))
-                                        backgroundColor = backgroundColor.Substring(1, backgroundColor.Length - 2);
-                                }
-                            }
-
-                            if (formattingStr.Contains($"borderColor{categoryIndex}:"))
-                            {
-                                int start = formattingStr.IndexOf($"borderColor{categoryIndex}:") + 12 + categoryIndex.ToString().Length;
-                                int end = formattingStr.IndexOf(",", start);
-                                if (end == -1) end = formattingStr.IndexOf("}", start);
-                                if (end > start)
-                                {
-                                    borderColor = formattingStr.Substring(start, end - start).Trim();
-                                    if (borderColor.StartsWith("\"") && borderColor.EndsWith("\""))
-                                        borderColor = borderColor.Substring(1, borderColor.Length - 2);
-                                }
-                            }
-                        }
-
-                        // Create dataset label
-                        string datasetLabel = seriesColumns.Count > 1
-                            ? $"{seriesName} - {category}"
-                            : category;
-
-                        // Create dataset JSON
-                        string dataset = $@"{{
-                    label: '{datasetLabel}',
-                    data: {JsonConvert.SerializeObject(values)},
-                    backgroundColor: '{backgroundColor}',
-                    borderColor: '{borderColor}',
-                    borderWidth: {options.BorderWidth}
-                }}";
-
-                        datasets.Add(dataset);
+                        string datasetLabel = seriesColumns.Count > 1 ? $"{seriesName} - {category}" : category;
+                        datasets.Add($"{{ label: '{datasetLabel}', data: {JsonConvert.SerializeObject(values)}, backgroundColor: '{backgroundColor}', borderColor: '{borderColor}', borderWidth: {options.BorderWidth} }}");
                         categoryIndex++;
                     }
-
-                    seriesIndex++;
                 }
             }
             else
             {
-                // Traditional chart rendering (no groupBy)
-                for (int i = 0; i < seriesColumns.Count; i++)
+                int seriesIndex = 0;
+                foreach (string seriesName in seriesColumns)
                 {
-                    string seriesName = seriesColumns[i];
-                    if (!seriesColumnIndices.ContainsKey(seriesName)) continue;
-
-                    int colIndex = seriesColumnIndices[seriesName];
-
-                    // Extract values for this series
-                    List<double> values = new List<double>();
-                    foreach (DataRow row in data.Rows)
-                    {
-                        values.Add(Convert.ToDouble(row[colIndex]));
-                    }
-
-                    // Use current series color from the palette
-                    string backgroundColor = options.BackgroundColors[i % options.BackgroundColors.Length];
-                    string borderColor = options.BorderColors[i % options.BorderColors.Length];
-
-                    // Custom colors can be added from formatting
-                    if (instructions.ContainsKey("formatting"))
-                    {
-                        string formattingStr = instructions["formatting"];
-
-                        if (formattingStr.Contains($"backgroundColor{i}:"))
-                        {
-                            int start = formattingStr.IndexOf($"backgroundColor{i}:") + 15 + i.ToString().Length;
-                            int end = formattingStr.IndexOf(",", start);
-                            if (end == -1) end = formattingStr.IndexOf("}", start);
-                            if (end > start)
-                            {
-                                backgroundColor = formattingStr.Substring(start, end - start).Trim();
-                                if (backgroundColor.StartsWith("\"") && backgroundColor.EndsWith("\""))
-                                    backgroundColor = backgroundColor.Substring(1, backgroundColor.Length - 2);
-                            }
-                        }
-
-                        if (formattingStr.Contains($"borderColor{i}:"))
-                        {
-                            int start = formattingStr.IndexOf($"borderColor{i}:") + 12 + i.ToString().Length;
-                            int end = formattingStr.IndexOf(",", start);
-                            if (end == -1) end = formattingStr.IndexOf("}", start);
-                            if (end > start)
-                            {
-                                borderColor = formattingStr.Substring(start, end - start).Trim();
-                                if (borderColor.StartsWith("\"") && borderColor.EndsWith("\""))
-                                    borderColor = borderColor.Substring(1, borderColor.Length - 2);
-                            }
-                        }
-                    }
-
-                    // Create dataset JSON for this series
-                    string dataset = $@"{{
-                label: '{seriesName}',
-                data: {JsonConvert.SerializeObject(values)},
-                backgroundColor: '{backgroundColor}',
-                borderColor: '{borderColor}',
-                borderWidth: {options.BorderWidth}
-            }}";
-
-                    datasets.Add(dataset);
+                    if (!columnIndices.ContainsKey(seriesName)) continue;
+                    int colIndex = columnIndices[seriesName];
+                    List<double> values = data.AsEnumerable().Select(row => SafeConvertToDouble(row[colIndex])).ToList();
+                    string backgroundColor = options.BackgroundColors[seriesIndex % options.BackgroundColors.Length];
+                    string borderColor = options.BorderColors[seriesIndex % options.BorderColors.Length];
+                    datasets.Add($"{{ label: '{seriesName}', data: {JsonConvert.SerializeObject(values)}, backgroundColor: '{backgroundColor}', borderColor: '{borderColor}', borderWidth: {options.BorderWidth} }}");
+                    seriesIndex++;
                 }
             }
 
-            // Create the HTML container for the chart
             string html = $"<div style='width:100%; height:400px;'><canvas id='{chartId}'></canvas></div>";
-
-            // Add the Chart.js initialization script with sorting capability
             html += $@"
 <script>
-    $(document).ready(function() {{
-        var ctx = document.getElementById('{chartId}').getContext('2d');
-        
-        // Original data
-        var chartData = {{
-            labels: {JsonConvert.SerializeObject(labels)},
-            datasets: [{string.Join(",", datasets)}]
-        }};
-        
-        // Apply sorting if specified
+    document.addEventListener('DOMContentLoaded', function() {{
+        var ctx = document.getElementById('{chartId}');
+        if (!ctx) return;
+        ctx = ctx.getContext('2d');
+        var chartData = {{ labels: {JsonConvert.SerializeObject(labels)}, datasets: [{string.Join(",", datasets)}] }};
         {ChartHelpers.GetDefaultSortingScript(options.SortBy, options.SortDirection, legendsColumn)}
-        
-        var myBarChart = new Chart(ctx, {{
+        new Chart(ctx, {{
             type: 'bar',
             data: chartData,
             options: {{
                 indexAxis: '{(options.Horizontal ? "y" : "x")}',
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {{
-                    x: {{
-                        type: 'category',
-                        display: true,
-                        grid: {{
-                            offset: false
-                        }},
-                        ticks: {{
-                            autoSkip: false
-                        }}
-                    }},
-                    y: {{
-                        stacked: {options.Stacked.ToString().ToLower()},
-                        beginAtZero: true
-                    }}
-                }},
-                plugins: {{
-                    legend: {{
-                        display: true,
-                        position: 'top'
-                    }},
-                    title: {{
-                        display: true,
-                        text: '{options.ChartTitle}'
-                    }}
-                }}
+                responsive: true, maintainAspectRatio: false,
+                scales: {{ x: {{ stacked: {options.Stacked.ToString().ToLower()} }}, y: {{ stacked: {options.Stacked.ToString().ToLower()}, beginAtZero: true }} }},
+                plugins: {{ title: {{ display: true, text: '{options.ChartTitle}' }} }}
             }}
         }});
     }});
 </script>";
-
             return html;
         }
 
         public string RenderLineChart(DataTable data, Dictionary<string, string> instructions)
         {
-            // Create a unique ID for the chart
             string chartId = "linechart_" + Guid.NewGuid().ToString("N");
-
-            // Parse options from instructions
             var options = FormatParser.ParseLineChartOptions(instructions);
+            List<string> seriesColumns = instructions.ContainsKey("series") ? ChartHelpers.ParseArray(instructions["series"]) : new List<string> { data.Columns[1].ColumnName };
+            string groupByColumn = instructions.ContainsKey("groupBy") ? instructions["groupBy"] : null;
+            string legendsColumn = instructions.ContainsKey("legends") ? ChartHelpers.ParseArray(instructions["legends"]).FirstOrDefault() ?? data.Columns[0].ColumnName : data.Columns[0].ColumnName;
 
-            // Get series column names
-            List<string> seriesColumns = new List<string>();
-            if (instructions.ContainsKey("series"))
-            {
-                seriesColumns = ChartHelpers.ParseArray(instructions["series"]);
-            }
-            else
-            {
-                // Default to second column
-                seriesColumns.Add(data.Columns[1].ColumnName);
-            }
+            var columnIndices = ChartHelpers.GetColumnIndices(data, data.Columns.Cast<DataColumn>().Select(c => c.ColumnName).ToList());
+            int legendsColumnIndex = columnIndices.ContainsKey(legendsColumn) ? columnIndices[legendsColumn] : 0;
+            int groupByColumnIndex = !string.IsNullOrEmpty(groupByColumn) && columnIndices.ContainsKey(groupByColumn) ? columnIndices[groupByColumn] : -1;
 
-            // Check if we need to group by a column
-            string groupByColumn = null;
-            if (instructions.ContainsKey("groupBy"))
-            {
-                groupByColumn = instructions["groupBy"];
-            }
-
-            // Get legends (defaults to first column for labels on x-axis)
-            string legendsColumn = data.Columns[0].ColumnName;
-            if (instructions.ContainsKey("legends"))
-            {
-                var legends = ChartHelpers.ParseArray(instructions["legends"]);
-                if (legends.Any())
-                {
-                    legendsColumn = legends.First();
-                }
-            }
-
-            // Get column indices
-            int legendsColumnIndex = -1;
-            Dictionary<string, int> seriesColumnIndices = new Dictionary<string, int>();
-            int groupByColumnIndex = -1;
-
-            // Find legend column index
-            for (int i = 0; i < data.Columns.Count; i++)
-            {
-                if (data.Columns[i].ColumnName.Equals(legendsColumn, StringComparison.OrdinalIgnoreCase))
-                {
-                    legendsColumnIndex = i;
-                    break;
-                }
-            }
-
-            // Find series column indices
-            foreach (string seriesName in seriesColumns)
-            {
-                for (int i = 0; i < data.Columns.Count; i++)
-                {
-                    if (data.Columns[i].ColumnName.Equals(seriesName, StringComparison.OrdinalIgnoreCase))
-                    {
-                        seriesColumnIndices[seriesName] = i;
-                        break;
-                    }
-                }
-            }
-
-            // Find groupBy column index if specified
-            if (!string.IsNullOrEmpty(groupByColumn))
-            {
-                for (int i = 0; i < data.Columns.Count; i++)
-                {
-                    if (data.Columns[i].ColumnName.Equals(groupByColumn, StringComparison.OrdinalIgnoreCase))
-                    {
-                        groupByColumnIndex = i;
-                        break;
-                    }
-                }
-            }
-
-            // Extract labels for x-axis and prepare datasets
-            List<string> labels = new List<string>();
+            List<string> labels = ChartHelpers.GetUniqueOrderedLabels(data, legendsColumnIndex);
             List<string> datasets = new List<string>();
 
-            // Standard chart (no groupBy)
-            if (string.IsNullOrEmpty(groupByColumn) || groupByColumnIndex == -1)
+            if (groupByColumnIndex != -1)
             {
-                // Extract labels
-                foreach (DataRow row in data.Rows)
-                {
-                    labels.Add(row[legendsColumnIndex].ToString());
-                }
-
-                // Create a dataset for each series
-                int seriesIndex = 0;
+                List<string> uniqueCategories = data.AsEnumerable().Select(row => row[groupByColumnIndex].ToString()).Distinct().OrderBy(c => c).ToList();
+                int categoryIndex = 0;
                 foreach (string seriesName in seriesColumns)
                 {
-                    if (!seriesColumnIndices.ContainsKey(seriesName)) continue;
+                    if (!columnIndices.ContainsKey(seriesName)) continue;
+                    int colIndex = columnIndices[seriesName];
 
-                    int colIndex = seriesColumnIndices[seriesName];
-                    List<double> values = new List<double>();
-
-                    foreach (DataRow row in data.Rows)
+                    foreach (string category in uniqueCategories)
                     {
-                        values.Add(Convert.ToDouble(row[colIndex]));
-                    }
-
-                    // Create dataset
-                    string color = options.Colors[seriesIndex % options.Colors.Length];
-                    string dataset = $@"{{
-                label: '{seriesName}',
-                data: {JsonConvert.SerializeObject(values)},
-                backgroundColor: '{color}',
-                borderColor: '{color}',
-                fill: false,
-                tension: {options.Tension / 100.0},
-                pointRadius: {(options.ShowPoints ? "3" : "0")}
-            }}";
-
-                    datasets.Add(dataset);
-                    seriesIndex++;
-                }
-            }
-            // GroupBy chart
-            else
-            {
-                // Get unique legends for x-axis
-                HashSet<string> uniqueLegends = new HashSet<string>();
-                foreach (DataRow row in data.Rows)
-                {
-                    uniqueLegends.Add(row[legendsColumnIndex].ToString());
-                }
-                labels = uniqueLegends.OrderBy(l => l).ToList();
-
-                // Get unique categories from groupBy column
-                HashSet<string> uniqueCategories = new HashSet<string>();
-                foreach (DataRow row in data.Rows)
-                {
-                    uniqueCategories.Add(row[groupByColumnIndex].ToString());
-                }
-
-                // For each series column
-                int seriesIndex = 0;
-                foreach (string seriesName in seriesColumns)
-                {
-                    if (!seriesColumnIndices.ContainsKey(seriesName)) continue;
-
-                    int colIndex = seriesColumnIndices[seriesName];
-
-                    // For each category, create a separate dataset
-                    int categoryIndex = 0;
-                    foreach (string category in uniqueCategories.OrderBy(c => c))
-                    {
-                        // Create a mapping of legend to value for this category
-                        Dictionary<string, double> valueMap = new Dictionary<string, double>();
-
-                        // Initialize all labels with zero
-                        foreach (string label in labels)
-                        {
-                            valueMap[label] = 0;
-                        }
-
-                        // Fill in values from matching rows
+                        Dictionary<string, double> valuesByLegend = labels.ToDictionary(l => l, l => 0.0);
                         foreach (DataRow row in data.Rows)
                         {
                             if (row[groupByColumnIndex].ToString() == category)
                             {
                                 string legend = row[legendsColumnIndex].ToString();
-                                valueMap[legend] = Convert.ToDouble(row[colIndex]);
+                                if (valuesByLegend.ContainsKey(legend))
+                                {
+                                    valuesByLegend[legend] = SafeConvertToDouble(row[colIndex]);
+                                }
                             }
                         }
-
-                        // Extract values in label order
-                        List<double> values = new List<double>();
-                        foreach (string label in labels)
-                        {
-                            values.Add(valueMap[label]);
-                        }
-
-                        // Select color for this dataset
-                        string color = options.Colors[(seriesIndex + categoryIndex) % options.Colors.Length];
-
-                        // Create dataset label (combine series and category if multiple series)
-                        string datasetLabel = seriesColumns.Count > 1
-                            ? $"{seriesName} - {category}"
-                            : category;
-
-                        // Create dataset
-                        string dataset = $@"{{
-                    label: '{datasetLabel}',
-                    data: {JsonConvert.SerializeObject(values)},
-                    backgroundColor: '{color}',
-                    borderColor: '{color}',
-                    fill: false,
-                    tension: {options.Tension / 100.0},
-                    pointRadius: {(options.ShowPoints ? "3" : "0")}
-                }}";
-
-                        datasets.Add(dataset);
+                        List<double> values = labels.Select(l => valuesByLegend[l]).ToList();
+                        string color = options.Colors[categoryIndex % options.Colors.Length];
+                        string datasetLabel = seriesColumns.Count > 1 ? $"{seriesName} - {category}" : category;
+                        datasets.Add($"{{ label: '{datasetLabel}', data: {JsonConvert.SerializeObject(values)}, borderColor: '{color}', backgroundColor: '{color}', fill: false, tension: {options.Tension / 100.0}, pointRadius: {(options.ShowPoints ? 3 : 0)} }}");
                         categoryIndex++;
                     }
-
+                }
+            }
+            else
+            {
+                int seriesIndex = 0;
+                foreach (string seriesName in seriesColumns)
+                {
+                    if (!columnIndices.ContainsKey(seriesName)) continue;
+                    int colIndex = columnIndices[seriesName];
+                    List<double> values = data.AsEnumerable().Select(row => SafeConvertToDouble(row[colIndex])).ToList();
+                    string color = options.Colors[seriesIndex % options.Colors.Length];
+                    datasets.Add($"{{ label: '{seriesName}', data: {JsonConvert.SerializeObject(values)}, borderColor: '{color}', backgroundColor: '{color}', fill: false, tension: {options.Tension / 100.0}, pointRadius: {(options.ShowPoints ? 3 : 0)} }}");
                     seriesIndex++;
                 }
             }
 
-            // Create the HTML container for the chart
             string html = $"<div style='width:100%; height:400px;'><canvas id='{chartId}'></canvas></div>";
-
-            // Add the Chart.js initialization script with sorting capability
             html += $@"
 <script>
-    $(document).ready(function() {{
-        var ctx = document.getElementById('{chartId}').getContext('2d');
-        
-        // Original data
-        var chartData = {{
-            labels: {JsonConvert.SerializeObject(labels)},
-            datasets: [{string.Join(",", datasets)}]
-        }};
-        
-        // Apply sorting if specified
+    document.addEventListener('DOMContentLoaded', function() {{
+        var ctx = document.getElementById('{chartId}');
+        if (!ctx) return;
+        ctx = ctx.getContext('2d');
+        var chartData = {{ labels: {JsonConvert.SerializeObject(labels)}, datasets: [{string.Join(",", datasets)}] }};
         {ChartHelpers.GetDefaultSortingScript(options.SortBy, options.SortDirection, legendsColumn)}
-        
-        var myLineChart = new Chart(ctx, {{
+        new Chart(ctx, {{
             type: 'line',
             data: chartData,
             options: {{
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {{
-                    x: {{
-                        display: true
-                    }},
-                    y: {{
-                        display: true,
-                        beginAtZero: true
-                    }}
-                }},
-                plugins: {{
-                    legend: {{
-                        display: true,
-                        position: 'top'
-                    }},
-                    title: {{
-                        display: true,
-                        text: '{options.ChartTitle}'
-                    }}
-                }}
+                responsive: true, maintainAspectRatio: false,
+                scales: {{ y: {{ beginAtZero: true }} }},
+                plugins: {{ title: {{ display: true, text: '{options.ChartTitle}' }} }}
             }}
         }});
     }});
 </script>";
-
-            return html;
-        }
-
-        public string RenderFilterComponent(Dictionary<string, string> instructions)
-        {
-            // Get filter properties with better debugging
-            System.Diagnostics.Debug.WriteLine("Filter instructions keys: " + string.Join(", ", instructions.Keys));
-
-            string id = instructions.ContainsKey("id") ? instructions["id"] : "filter_" + Guid.NewGuid().ToString("N");
-            string name = instructions.ContainsKey("param") ? instructions["param"] :
-                         (instructions.ContainsKey("name") ? instructions["name"] : id);
-            string label = instructions.ContainsKey("label") ? instructions["label"] : name;
-            string value = instructions.ContainsKey("value") ? instructions["value"] : "";
-            string defaultValue = instructions.ContainsKey("default") ? instructions["default"] : "";
-            if (string.IsNullOrEmpty(value)) value = defaultValue;
-
-            string filterType = instructions.ContainsKey("filterType") ? instructions["filterType"].ToLower() :
-                               (instructions.ContainsKey("type") ? instructions["type"].ToLower() : "dropdown");
-
-            System.Diagnostics.Debug.WriteLine($"Rendering filter: {id}, {name}, {label}, type={filterType}");
-
-            // Handle the db-sourced options
-            string dataSource = instructions.ContainsKey("dataSource") ? instructions["dataSource"] : "";
-            string valueField = instructions.ContainsKey("valueField") ? instructions["valueField"] : "";
-            string textField = instructions.ContainsKey("textField") ? instructions["textField"] : valueField;
-
-            // Handle the options more carefully for static values
-            List<string> options = new List<string>();
-            if (instructions.ContainsKey("options"))
-            {
-                string optionsStr = instructions["options"];
-                System.Diagnostics.Debug.WriteLine($"Raw options string: {optionsStr}");
-
-                // Try to parse as JSON array if it looks like one
-                if (optionsStr.StartsWith("[") && optionsStr.EndsWith("]"))
-                {
-                    try
-                    {
-                        // Simple parsing for array of strings
-                        optionsStr = optionsStr.Substring(1, optionsStr.Length - 2);
-                        options = optionsStr.Split(',')
-                            .Select(o => o.Trim().Trim('\'', '"'))
-                            .ToList();
-
-                        System.Diagnostics.Debug.WriteLine($"Parsed options: {string.Join(", ", options)}");
-                    }
-                    catch (Exception ex)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"Error parsing options: {ex.Message}");
-                    }
-                }
-            }
-            // Also support "values" attribute for backwards compatibility
-            else if (instructions.ContainsKey("values"))
-            {
-                string optionsStr = instructions["values"];
-                System.Diagnostics.Debug.WriteLine($"Raw values string: {optionsStr}");
-
-                // Parse comma-separated values
-                options = optionsStr.Split(',')
-                            .Select(o => o.Trim().Trim('\'', '"'))
-                            .ToList();
-
-                System.Diagnostics.Debug.WriteLine($"Parsed values: {string.Join(", ", options)}");
-            }
-
-            // Handle affects attribute - which charts are affected by this filter
-            string affects = instructions.ContainsKey("affects") ? instructions["affects"] : "";
-
-            // Build the HTML
-            string html = $"<div class='filter-component'>\n";
-            html += $"  <label for='{id}'>{label}</label>\n";
-
-            if (filterType == "dropdown")
-            {
-                html += $"  <select id='{id}' name='{name}' class='form-control filter-dropdown' data-param-name='{name}'";
-
-                // Add affects attribute if specified
-                if (!string.IsNullOrEmpty(affects))
-                {
-                    html += $" data-affects='{affects}'";
-                }
-
-                html += ">\n";
-
-                // Only add empty option if not a required field
-                bool isRequired = instructions.ContainsKey("required") &&
-                                  instructions["required"].ToLower() == "true";
-
-                if (!isRequired)
-                {
-                    html += $"    <option value=''>-- Select --</option>\n";
-                }
-
-                // For static options list
-                if (options.Count > 0)
-                {
-                    foreach (var option in options)
-                    {
-                        string selected = option == value ? " selected" : "";
-                        html += $"    <option value='{option}'{selected}>{option}</option>\n";
-                    }
-                }
-
-                html += "  </select>\n";
-
-                // For database-sourced dropdown, add AJAX to populate it
-                if (!string.IsNullOrEmpty(dataSource))
-                {
-                    html += $@"
-  <script>
-    $(document).ready(function() {{
-        console.log('Loading options for {id} from database');
-        $.ajax({{
-            url: '/Report/GetFilterData',
-            type: 'GET',
-            data: {{ 
-                query: '{HttpUtility.JavaScriptStringEncode(dataSource)}',
-                valueField: '{HttpUtility.JavaScriptStringEncode(valueField)}',
-                textField: '{HttpUtility.JavaScriptStringEncode(textField)}'
-            }},
-            success: function(data) {{
-                var select = $('#{id}');
-                console.log('Received ' + data.length + ' options for {id}');
-                
-                // Add options
-                $.each(data, function(i, item) {{
-                    var option = $('<option>').val(item.value).text(item.text);
-                    if (item.value == '{HttpUtility.JavaScriptStringEncode(value)}') {{
-                        option.prop('selected', true);
-                    }}
-                    select.append(option);
-                }});
-                
-                // Trigger change to refresh dependent elements
-                select.trigger('change');
-            }},
-            error: function(error) {{
-                console.error('Failed to load filter options for {id}:', error);
-                $('#{id}').append('<option>Error loading options</option>');
-            }}
-        }});
-    }});
-  </script>";
-                }
-            }
-            else if (filterType == "button" || filterType == "buttons")
-            {
-                // Extract button values and labels
-                List<string> buttonValues = options.Count > 0 ? options : new List<string> { "Yes", "No" };
-                List<string> buttonLabels = new List<string>();
-
-                if (instructions.ContainsKey("labels"))
-                {
-                    buttonLabels = instructions["labels"].Split(',')
-                                   .Select(l => l.Trim().Trim('\'', '"'))
-                                   .ToList();
-                }
-                else
-                {
-                    // If no labels provided, use values as labels
-                    buttonLabels = buttonValues.ToList();
-                }
-
-                // Ensure we have enough labels
-                while (buttonLabels.Count < buttonValues.Count)
-                {
-                    buttonLabels.Add(buttonValues[buttonLabels.Count]);
-                }
-
-                html += $"  <div class='btn-group filter-button-group' role='group' aria-label='{label}'";
-
-                // Add affects attribute if specified
-                if (!string.IsNullOrEmpty(affects))
-                {
-                    html += $" data-affects='{affects}'";
-                }
-
-                html += ">\n";
-
-                // Add individual buttons
-                for (int i = 0; i < buttonValues.Count; i++)
-                {
-                    string buttonValue = buttonValues[i];
-                    string buttonLabel = buttonLabels[i];
-                    bool isActive = buttonValue == value;
-
-                    html += $@"    <button type='button' 
-                     class='btn {(isActive ? "btn-primary" : "btn-secondary")} filter-button' 
-                     data-param-name='{name}' 
-                     data-value='{buttonValue}'>
-                {buttonLabel}
-            </button>
-";
-                }
-
-                html += "  </div>\n";
-            }
-            else if (filterType == "date" || filterType == "calendar")
-            {
-                html += $@"  <input type='text' id='{id}' name='{name}' value='{value}' 
-                 class='form-control datepicker' data-param-name='{name}'";
-
-                // Add affects attribute if specified
-                if (!string.IsNullOrEmpty(affects))
-                {
-                    html += $" data-affects='{affects}'";
-                }
-
-                html += " />\n";
-
-                // Initialize datepicker
-                html += $@"
-  <script>
-    $(document).ready(function() {{
-        $('#{id}').datepicker({{
-            format: 'yyyy-mm-dd',
-            autoclose: true
-        }});
-    }});
-  </script>";
-            }
-            else if (filterType == "number")
-            {
-                html += $@"  <input type='number' id='{id}' name='{name}' value='{value}' 
-                 class='form-control filter-text' data-param-name='{name}'";
-
-                // Add min/max if specified
-                if (instructions.ContainsKey("min"))
-                {
-                    html += $" min='{instructions["min"]}'";
-                }
-
-                if (instructions.ContainsKey("max"))
-                {
-                    html += $" max='{instructions["max"]}'";
-                }
-
-                // Add step if specified
-                if (instructions.ContainsKey("step"))
-                {
-                    html += $" step='{instructions["step"]}'";
-                }
-
-                // Add affects attribute if specified
-                if (!string.IsNullOrEmpty(affects))
-                {
-                    html += $" data-affects='{affects}'";
-                }
-
-                html += " />\n";
-            }
-            else // default to text
-            {
-                html += $@"  <div class='input-group'>
-    <input type='text' id='{id}' name='{name}' value='{value}' 
-           class='form-control filter-text' data-param-name='{name}'";
-
-                // Add affects attribute if specified
-                if (!string.IsNullOrEmpty(affects))
-                {
-                    html += $" data-affects='{affects}'";
-                }
-
-                html += @" />
-    <div class='input-group-append'>
-        <button class='btn btn-outline-secondary filter-apply-btn' type='button'>Apply</button>
-    </div>
-  </div>
-";
-            }
-
-            html += "</div>\n";
-
             return html;
         }
 
         public string RenderPieChart(DataTable data, Dictionary<string, string> instructions)
         {
-            // Create a unique ID for the chart
             string chartId = "piechart_" + Guid.NewGuid().ToString("N");
-
-            // Parse options from instructions
             var options = FormatParser.ParsePieChartOptions(instructions);
+            string seriesColumn = instructions.ContainsKey("series") ? ChartHelpers.ParseArray(instructions["series"]).FirstOrDefault() ?? data.Columns[1].ColumnName : data.Columns[1].ColumnName;
+            string legendsColumn = instructions.ContainsKey("legends") ? ChartHelpers.ParseArray(instructions["legends"]).FirstOrDefault() ?? data.Columns[0].ColumnName : data.Columns[0].ColumnName;
+            string groupByColumn = instructions.ContainsKey("groupBy") ? instructions["groupBy"] : null;
 
-            // Get series column name (value column for the pie chart)
-            string seriesColumn = "";
-            if (instructions.ContainsKey("series"))
+            var columnIndices = ChartHelpers.GetColumnIndices(data, data.Columns.Cast<DataColumn>().Select(c => c.ColumnName).ToList());
+            int legendsColumnIndex = columnIndices[legendsColumn];
+            int seriesColumnIndex = columnIndices[seriesColumn];
+            int groupByColumnIndex = !string.IsNullOrEmpty(groupByColumn) && columnIndices.ContainsKey(groupByColumn) ? columnIndices[groupByColumn] : -1;
+
+            if (groupByColumnIndex != -1)
             {
-                var seriesColumns = ChartHelpers.ParseArray(instructions["series"]);
-                if (seriesColumns.Any())
+                // VISSZAÁLLÍTVA: Logika több diagram rendereléséhez
+                List<string> uniqueGroups = data.AsEnumerable().Select(row => row[groupByColumnIndex].ToString()).Distinct().OrderBy(g => g).ToList();
+                string html = "<div style='width:100%; display:flex; flex-wrap:wrap; justify-content:center;'>";
+                for (int i = 0; i < uniqueGroups.Count; i++)
                 {
-                    seriesColumn = seriesColumns.First();
+                    string group = uniqueGroups[i];
+                    string groupChartId = $"{chartId}_{i}";
+                    var groupData = data.AsEnumerable().Where(r => r[groupByColumnIndex].ToString() == group);
+
+                    List<string> labels = groupData.Select(r => r[legendsColumnIndex].ToString()).ToList();
+                    List<double> values = groupData.Select(r => SafeConvertToDouble(r[seriesColumnIndex])).ToList();
+                    List<string> bgColors = Enumerable.Range(0, labels.Count).Select(n => options.BackgroundColors[n % options.BackgroundColors.Length]).ToList();
+                    List<string> borderColors = Enumerable.Range(0, labels.Count).Select(n => options.BorderColors[n % options.BorderColors.Length]).ToList();
+
+                    html += $"<div style='flex: 1; min-width: 300px; max-width: 500px; margin: 10px;'><h3 style='text-align: center;'>{group}</h3><div style='height: 300px;'><canvas id='{groupChartId}'></canvas></div></div>";
+                    html += GetPieChartScript(groupChartId, options, labels, values, bgColors, borderColors, legendsColumn);
                 }
-            }
-            else if (data.Columns.Count > 1)
-            {
-                // Default to second column
-                seriesColumn = data.Columns[1].ColumnName;
-            }
-
-            // Check if we need to group by a column
-            string groupByColumn = null;
-            if (instructions.ContainsKey("groupBy"))
-            {
-                groupByColumn = instructions["groupBy"];
-            }
-
-            // Get legends (defaults to first column for labels)
-            string legendsColumn = data.Columns[0].ColumnName;
-            if (instructions.ContainsKey("legends"))
-            {
-                var legends = ChartHelpers.ParseArray(instructions["legends"]);
-                if (legends.Any())
-                {
-                    legendsColumn = legends.First();
-                }
-            }
-
-            // Get column indices
-            int legendsColumnIndex = -1;
-            int seriesColumnIndex = -1;
-            int groupByColumnIndex = -1;
-
-            // Find legend column index
-            for (int i = 0; i < data.Columns.Count; i++)
-            {
-                if (data.Columns[i].ColumnName.Equals(legendsColumn, StringComparison.OrdinalIgnoreCase))
-                {
-                    legendsColumnIndex = i;
-                    break;
-                }
-            }
-
-            // Find series column index
-            for (int i = 0; i < data.Columns.Count; i++)
-            {
-                if (data.Columns[i].ColumnName.Equals(seriesColumn, StringComparison.OrdinalIgnoreCase))
-                {
-                    seriesColumnIndex = i;
-                    break;
-                }
-            }
-
-            // Find groupBy column index if specified
-            if (!string.IsNullOrEmpty(groupByColumn))
-            {
-                for (int i = 0; i < data.Columns.Count; i++)
-                {
-                    if (data.Columns[i].ColumnName.Equals(groupByColumn, StringComparison.OrdinalIgnoreCase))
-                    {
-                        groupByColumnIndex = i;
-                        break;
-                    }
-                }
-            }
-
-            // Variables to store data for the chart
-            List<string> labels = new List<string>();
-            List<double> values = new List<double>();
-            List<string> backgroundColorList = new List<string>();
-            List<string> borderColorList = new List<string>();
-
-            // Different behavior based on whether we're grouping or not
-            if (!string.IsNullOrEmpty(groupByColumn) && groupByColumnIndex != -1)
-            {
-                // We're generating a multi-chart presentation - one pie chart per groupBy value
-
-                // Get unique group values
-                List<string> uniqueGroups = data.AsEnumerable()
-                    .Select(row => row[groupByColumnIndex].ToString())
-                    .Distinct()
-                    .OrderBy(g => g)
-                    .ToList();
-
-                // Create a container div for all charts
-                string html = $"<div style='width:100%; display:flex; flex-wrap:wrap; justify-content:center;'>";
-
-                // Generate one pie chart for each group
-                for (int groupIndex = 0; groupIndex < uniqueGroups.Count; groupIndex++)
-                {
-                    string groupValue = uniqueGroups[groupIndex];
-                    string groupChartId = $"{chartId}_{groupIndex}";
-
-                    // Filter data for this group
-                    var groupData = data.AsEnumerable()
-                        .Where(row => row[groupByColumnIndex].ToString() == groupValue)
-                        .ToList();
-
-                    // Get labels and values for this group
-                    labels.Clear();
-                    values.Clear();
-                    backgroundColorList.Clear();
-                    borderColorList.Clear();
-
-                    for (int i = 0; i < groupData.Count; i++)
-                    {
-                        DataRow row = groupData[i];
-                        labels.Add(row[legendsColumnIndex].ToString());
-                        values.Add(Convert.ToDouble(row[seriesColumnIndex]));
-
-                        // Use the color palette with cycling
-                        backgroundColorList.Add(options.BackgroundColors[i % options.BackgroundColors.Length]);
-                        borderColorList.Add(options.BorderColors[i % options.BorderColors.Length]);
-                    }
-
-                    // Create chart div for this group
-                    html += $"<div style='flex: 1; min-width: 300px; max-width: 500px; margin: 10px;'>";
-                    html += $"<h3 style='text-align: center;'>{groupValue}</h3>";
-                    html += $"<div style='height: 300px;'><canvas id='{groupChartId}'></canvas></div>";
-
-                    // Add the Chart.js initialization script for this group
-                    html += $@"
-<script>
-    $(document).ready(function() {{
-        var ctx = document.getElementById('{groupChartId}').getContext('2d');
-        
-        // Prepare chart data
-        var chartData = {{
-            labels: {JsonConvert.SerializeObject(labels)},
-            datasets: [{{
-                data: {JsonConvert.SerializeObject(values)},
-                backgroundColor: {JsonConvert.SerializeObject(backgroundColorList)},
-                borderColor: {JsonConvert.SerializeObject(borderColorList)},
-                borderWidth: 1
-            }}]
-        }};
-        
-        // Apply sorting if specified
-        {ChartHelpers.GetPieSortingScript(options.SortBy, options.SortDirection, legendsColumn)}
-        
-        var myPieChart = new Chart(ctx, {{
-            type: '{(options.IsDoughnut ? "doughnut" : "pie")}',
-            data: chartData,
-            options: {{
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {{
-                    legend: {{
-                        display: {options.ShowLegend.ToString().ToLower()},
-                        position: 'right',
-                        labels: {{
-                            generateLabels: function(chart) {{
-                                // Get the default legend items
-                                const original = Chart.overrides.pie.plugins.legend.labels.generateLabels;
-                                const labels = original.call(this, chart);
-                                
-                                // Only modify if showing values or percentages in legend
-                                if ({(options.ShowValues || options.ShowPercentages).ToString().ToLower()} && '{options.ValuePosition}' === 'legend') {{
-                                    // Calculate total for percentages
-                                    const total = chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
-                                    
-                                    // Modify the text to include values/percentages
-                                    labels.forEach((label, i) => {{
-                                        const value = chart.data.datasets[0].data[i];
-                                        const percentage = Math.round((value / total) * 100);
-                                        
-                                        let newText = label.text;
-                                        if ({options.ShowValues.ToString().ToLower()}) {{
-                                            newText += ' - ' + value.toLocaleString();
-                                        }}
-                                        if ({options.ShowPercentages.ToString().ToLower()}) {{
-                                            newText += ' (' + percentage + '%)';
-                                        }}
-                                        label.text = newText;
-                                    }});
-                                }}
-                                
-                                return labels;
-                            }}
-                        }}
-                    }},
-                    tooltip: {{
-                        callbacks: {{
-                            label: function(context) {{
-                                var label = context.label || '';
-                                var value = context.raw || 0;
-                                var total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                var percentage = Math.round((value / total) * 100);
-                                return label + ': ' + value.toLocaleString() + ' (' + percentage + '%)';
-                            }}
-                        }}
-                    }}
-                }}
-            }},
-            plugins: [
-                {{
-                    id: 'insideLabels',
-                    afterDraw: function(chart) {{
-                        // Only run this plugin for inside position with values or percentages
-                        var valuePosition = '{options.ValuePosition}';
-                        var showValues = {options.ShowValues.ToString().ToLower()};
-                        var showPercentages = {options.ShowPercentages.ToString().ToLower()};
-                        
-                        if (valuePosition !== 'inside' || (!showValues && !showPercentages)) {{
-                            return;
-                        }}
-                        
-                        var ctx = chart.ctx;
-                        ctx.save();
-                        
-                        var total = 0;
-                        for (var i = 0; i < chart.data.datasets[0].data.length; i++) {{
-                            total += chart.data.datasets[0].data[i];
-                        }}
-                        
-                        for (var i = 0; i < chart.getDatasetMeta(0).data.length; i++) {{
-                            var arc = chart.getDatasetMeta(0).data[i];
-                            var value = chart.data.datasets[0].data[i];
-                            
-                            if (value === 0) continue; // Skip zero values
-                            
-                            // Calculate percentage
-                            var percentage = Math.round((value / total) * 100);
-                            
-                            // Calculate display position
-                            var midAngle = (arc.startAngle + arc.endAngle) / 2;
-                            var radius = arc.outerRadius * 0.6;
-                            
-                            // Position based on slice size
-                            var slicePercentage = value / total;
-                            if (slicePercentage < 0.1) {{ // Small slice
-                                radius = arc.outerRadius * 0.5;
-                            }} else if (slicePercentage > 0.25) {{ // Large slice
-                                radius = arc.outerRadius * 0.7;
-                            }}
-                            
-                            var x = arc.x + Math.cos(midAngle) * radius;
-                            var y = arc.y + Math.sin(midAngle) * radius;
-                            
-                            // Format text
-                            var displayText = '';
-                            if (showValues) {{
-                                displayText += value.toLocaleString();
-                            }}
-                            if (showPercentages) {{
-                                if (displayText) displayText += ' ';
-                                displayText += '(' + percentage + '%)';
-                            }}
-                            
-                            // Draw text
-                            ctx.font = 'bold 12px Arial';
-                            ctx.fillStyle = 'white';
-                            ctx.textAlign = 'center';
-                            ctx.textBaseline = 'middle';
-                            ctx.fillText(displayText, x, y);
-                        }}
-                        
-                        ctx.restore();
-                    }}
-                }}
-            ]
-        }});
-    }});
-</script>";
-
-                    html += "</div>"; // Close the chart div
-                }
-
-                html += "</div>"; // Close the container div
+                html += "</div>";
                 return html;
             }
             else
             {
-                // Standard single pie chart
-                for (int i = 0; i < data.Rows.Count; i++)
-                {
-                    DataRow row = data.Rows[i];
-                    labels.Add(row[legendsColumnIndex].ToString());
-                    values.Add(Convert.ToDouble(row[seriesColumnIndex]));
+                // Eredeti logika egyetlen diagramhoz
+                List<string> labels = data.AsEnumerable().Select(r => r[legendsColumnIndex].ToString()).ToList();
+                List<double> values = data.AsEnumerable().Select(r => SafeConvertToDouble(r[seriesColumnIndex])).ToList();
+                List<string> bgColors = Enumerable.Range(0, labels.Count).Select(i => options.BackgroundColors[i % options.BackgroundColors.Length]).ToList();
+                List<string> borderColors = Enumerable.Range(0, labels.Count).Select(i => options.BorderColors[i % options.BorderColors.Length]).ToList();
 
-                    // Use the color palette with cycling
-                    backgroundColorList.Add(options.BackgroundColors[i % options.BackgroundColors.Length]);
-                    borderColorList.Add(options.BorderColors[i % options.BorderColors.Length]);
-
-                    // Custom colors can be added from formatting
-                    if (instructions.ContainsKey("formatting"))
-                    {
-                        string formattingStr = instructions["formatting"];
-
-                        if (formattingStr.Contains($"backgroundColor{i}:"))
-                        {
-                            int start = formattingStr.IndexOf($"backgroundColor{i}:") + 15 + i.ToString().Length;
-                            int end = formattingStr.IndexOf(",", start);
-                            if (end == -1) end = formattingStr.IndexOf("}", start);
-                            if (end > start)
-                            {
-                                string backgroundColor = formattingStr.Substring(start, end - start).Trim();
-                                if (backgroundColor.StartsWith("\"") && backgroundColor.EndsWith("\""))
-                                    backgroundColor = backgroundColor.Substring(1, backgroundColor.Length - 2);
-                                backgroundColorList[i] = backgroundColor;
-                            }
-                        }
-
-                        if (formattingStr.Contains($"borderColor{i}:"))
-                        {
-                            int start = formattingStr.IndexOf($"borderColor{i}:") + 12 + i.ToString().Length;
-                            int end = formattingStr.IndexOf(",", start);
-                            if (end == -1) end = formattingStr.IndexOf("}", start);
-                            if (end > start)
-                            {
-                                string borderColor = formattingStr.Substring(start, end - start).Trim();
-                                if (borderColor.StartsWith("\"") && borderColor.EndsWith("\""))
-                                    borderColor = borderColor.Substring(1, borderColor.Length - 2);
-                                borderColorList[i] = borderColor;
-                            }
-                        }
-                    }
-                }
-
-                // Create the HTML container for the chart
                 string html = $"<div style='width:100%; height:400px;'><canvas id='{chartId}'></canvas></div>";
+                html += GetPieChartScript(chartId, options, labels, values, bgColors, borderColors, legendsColumn);
+                return html;
+            }
+        }
 
-                // Add the Chart.js initialization script with sorting capability
-                html += $@"
+        private string GetPieChartScript(string chartId, PieChartOptions options, List<string> labels, List<double> values, List<string> bgColors, List<string> borderColors, string legendsColumn)
+        {
+            // VISSZAÁLLÍTVA: Részletes JS generálás a címkékhez
+            return $@"
 <script>
-    $(document).ready(function() {{
-        var ctx = document.getElementById('{chartId}').getContext('2d');
-        
-        // Prepare chart data
+    document.addEventListener('DOMContentLoaded', function() {{
+        var ctx = document.getElementById('{chartId}');
+        if(!ctx) return;
+        ctx = ctx.getContext('2d');
         var chartData = {{
             labels: {JsonConvert.SerializeObject(labels)},
-            datasets: [{{
-                data: {JsonConvert.SerializeObject(values)},
-                backgroundColor: {JsonConvert.SerializeObject(backgroundColorList)},
-                borderColor: {JsonConvert.SerializeObject(borderColorList)},
-                borderWidth: 1
-            }}]
+            datasets: [{{ data: {JsonConvert.SerializeObject(values)}, backgroundColor: {JsonConvert.SerializeObject(bgColors)}, borderColor: {JsonConvert.SerializeObject(borderColors)}, borderWidth: 1 }}]
         }};
-        
-        // Apply sorting if specified
         {ChartHelpers.GetPieSortingScript(options.SortBy, options.SortDirection, legendsColumn)}
-        
-        var myPieChart = new Chart(ctx, {{
+        new Chart(ctx, {{
             type: '{(options.IsDoughnut ? "doughnut" : "pie")}',
             data: chartData,
             options: {{
-                responsive: true,
-                maintainAspectRatio: false,
+                responsive: true, maintainAspectRatio: false,
                 plugins: {{
-                    legend: {{
-                        display: {options.ShowLegend.ToString().ToLower()},
-                        position: 'right',
-                        labels: {{
-                            generateLabels: function(chart) {{
-                                // Get the default legend items
-                                const original = Chart.overrides.pie.plugins.legend.labels.generateLabels;
-                                const labels = original.call(this, chart);
-                                
-                                // Only modify if showing values or percentages in legend
-                                if ({(options.ShowValues || options.ShowPercentages).ToString().ToLower()} && '{options.ValuePosition}' === 'legend') {{
-                                    // Calculate total for percentages
-                                    const total = chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
-                                    
-                                    // Modify the text to include values/percentages
-                                    labels.forEach((label, i) => {{
-                                        const value = chart.data.datasets[0].data[i];
-                                        const percentage = Math.round((value / total) * 100);
-                                        
-                                        let newText = label.text;
-                                        if ({options.ShowValues.ToString().ToLower()}) {{
-                                            newText += ' - ' + value.toLocaleString();
-                                        }}
-                                        if ({options.ShowPercentages.ToString().ToLower()}) {{
-                                            newText += ' (' + percentage + '%)';
-                                        }}
-                                        label.text = newText;
-                                    }});
-                                }}
-                                
-                                return labels;
-                            }}
-                        }}
-                    }},
+                    title: {{ display: true, text: '{options.ChartTitle}' }},
+                    legend: {{ display: {options.ShowLegend.ToString().ToLower()}, position: 'right' }},
                     tooltip: {{
                         callbacks: {{
                             label: function(context) {{
                                 var label = context.label || '';
                                 var value = context.raw || 0;
                                 var total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                var percentage = Math.round((value / total) * 100);
+                                var percentage = total > 0 ? Math.round((value / total) * 100) : 0;
                                 return label + ': ' + value.toLocaleString() + ' (' + percentage + '%)';
                             }}
                         }}
                     }}
                 }}
-            }},
-            plugins: [{{
-                id: 'valueLabels',
-                afterDraw: function(chart) {{
-                    // Only show labels if not legend mode and we're showing values or percentages
-                    if ('{options.ValuePosition}' === 'legend' || !({(options.ShowValues || options.ShowPercentages).ToString().ToLower()})) {{
-                        return;
-                    }}
-                    
-                    const ctx = chart.ctx;
-                    ctx.save();
-                    
-                    // Get the total for percentage calculations
-                    const total = chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
-                    
-                    chart.getDatasetMeta(0).data.forEach((arc, i) => {{
-                        const value = chart.data.datasets[0].data[i];
-                        if (value === 0) return; // Skip zero values
-                        
-                        // Get position based on mode
-                        let position = {{x: arc.x, y: arc.y}};
-                        if ('{options.ValuePosition}' === 'outside') {{
-                            const angle = (arc.startAngle + arc.endAngle) / 2;
-                            const radius = arc.outerRadius * 1.2;
-                            position.x += Math.cos(angle) * radius;
-                            position.y += Math.sin(angle) * radius;
-                        }}
-                        
-                        // Format text based on settings
-                        let text = '';
-                        if ({options.ShowValues.ToString().ToLower()}) {{
-                            text += value.toLocaleString();
-                        }}
-                        if ({options.ShowPercentages.ToString().ToLower()}) {{
-                            const percentage = Math.round((value / total) * 100);
-                            if (text) text += ' ';
-                            text += '(' + percentage + '%)';
-                        }}
-                        
-                        // Set styling
-                        ctx.font = 'bold 12px Arial';
-                        ctx.textAlign = 'center';
-                        ctx.textBaseline = 'middle';
-                        
-                        if ('{options.ValuePosition}' === 'inside') {{
-                            ctx.fillStyle = 'white';
-                            ctx.fillText(text, position.x, position.y);
-                        }} else {{
-                            // Add background for better readability
-                            const width = ctx.measureText(text).width + 6;
-                            const height = 16;
-                            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-                            ctx.fillRect(position.x - width/2, position.y - height/2, width, height);
-                            ctx.fillStyle = '#333';
-                            ctx.fillText(text, position.x, position.y);
-                        }}
-                    }});
-                    
-                    ctx.restore();
-                }}
-            }}]
+            }}
         }});
     }});
 </script>";
+        }
 
-                return html;
+        public string RenderFilterComponent(Dictionary<string, string> instructions)
+        {
+            // VISSZAÁLLÍTVA: Teljes funkcionalitású szűrő renderelés
+            string id = instructions.ContainsKey("id") ? instructions["id"] : "filter_" + Guid.NewGuid().ToString("N");
+            string name = instructions.ContainsKey("param") ? instructions["param"] : id;
+            string label = instructions.ContainsKey("label") ? instructions["label"] : name;
+            string value = instructions.ContainsKey("value") ? instructions["value"] : (instructions.ContainsKey("default") ? instructions["default"] : "");
+            string filterType = instructions.ContainsKey("type") ? instructions["type"].ToLower() : "dropdown";
+            string affects = instructions.ContainsKey("affects") ? $"data-affects='{instructions["affects"]}'" : "";
+
+            string html = $"<div class='filter-component'><label for='{id}'>{label}</label>";
+
+            switch (filterType)
+            {
+                case "dropdown":
+                    html += $"<select id='{id}' name='{name}' class='form-control filter-dropdown' {affects}>";
+                    if (!(instructions.ContainsKey("required") && instructions["required"].ToLower() == "true"))
+                        html += "<option value=''>-- Select --</option>";
+                    if (instructions.ContainsKey("options"))
+                    {
+                        foreach (var option in instructions["options"].Split(',').Select(o => o.Trim()))
+                        {
+                            html += $"<option value='{HttpUtility.HtmlAttributeEncode(option)}'{(option == value ? " selected" : "")}>{HttpUtility.HtmlEncode(option)}</option>";
+                        }
+                    }
+                    html += "</select>";
+                    if (instructions.ContainsKey("dataSource"))
+                    {
+                        html += $@"<script>
+                            document.addEventListener('DOMContentLoaded', function() {{
+                                $.ajax({{
+                                    url: '/Report/GetFilterData', type: 'GET',
+                                    data: {{ query: '{HttpUtility.JavaScriptStringEncode(instructions["dataSource"])}', valueField: '{instructions["valueField"]}', textField: '{instructions["textField"]}' }},
+                                    success: function(data) {{
+                                        var select = $('#{id}');
+                                        $.each(data, function(i, item) {{
+                                            var option = $('<option>').val(item.value).text(item.text);
+                                            if (item.value == '{HttpUtility.JavaScriptStringEncode(value)}') option.prop('selected', true);
+                                            select.append(option);
+                                        }});
+                                    }}
+                                }});
+                            }});
+                         </script>";
+                    }
+                    break;
+                case "button":
+                    var buttonValues = instructions.ContainsKey("options") ? instructions["options"].Split(',').Select(s => s.Trim()).ToList() : new List<string> { "Yes", "No" };
+                    var buttonLabels = instructions.ContainsKey("labels") ? instructions["labels"].Split(',').Select(s => s.Trim()).ToList() : buttonValues;
+                    html += $"<div class='btn-group filter-button-group' role='group' {affects}>";
+                    for (int i = 0; i < buttonValues.Count; i++)
+                    {
+                        var btnValue = buttonValues[i];
+                        var btnLabel = buttonLabels.Count > i ? buttonLabels[i] : btnValue;
+                        bool isActive = btnValue == value;
+                        html += $"<button type='button' class='btn {(isActive ? "btn-primary" : "btn-secondary")} filter-button' data-param-name='{name}' data-value='{btnValue}'>{btnLabel}</button>";
+                    }
+                    html += "</div>";
+                    break;
+                case "calendar":
+                case "date":
+                    html += $"<input type='text' id='{id}' name='{name}' value='{HttpUtility.HtmlAttributeEncode(value)}' class='form-control datepicker' {affects} />";
+                    html += $"<script>document.addEventListener('DOMContentLoaded', function() {{ $('#{id}').datepicker({{ format: 'yyyy-mm-dd', autoclose: true }}); }});</script>";
+                    break;
+                case "number":
+                    html += $"<input type='number' id='{id}' name='{name}' value='{HttpUtility.HtmlAttributeEncode(value)}' class='form-control filter-text' {affects} " +
+                       $"{(instructions.ContainsKey("min") ? "min='" + instructions["min"] + "'" : "")} " +
+                       $"{(instructions.ContainsKey("max") ? "max='" + instructions["max"] + "'" : "")} " +
+                       $"{(instructions.ContainsKey("step") ? "step='" + instructions["step"] + "'" : "")} />";
+                    break;
+                default: // text
+                    html += $"<div class='input-group'><input type='text' id='{id}' name='{name}' value='{HttpUtility.HtmlAttributeEncode(value)}' class='form-control filter-text' {affects} /><div class='input-group-append'><button class='btn btn-outline-secondary filter-apply-btn' type='button'>Apply</button></div></div>";
+                    break;
             }
+            html += "</div>";
+            return html;
+        }
+
+        public string RenderFilterComponent(DataTable data, Dictionary<string, string> instructions)
+        {
+            // This overload is now fully replaced by the one above.
+            // It can be kept for interface compatibility but shouldn't be called directly.
+            return RenderFilterComponent(instructions);
         }
     }
 }
