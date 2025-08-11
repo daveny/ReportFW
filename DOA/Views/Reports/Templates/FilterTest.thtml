@@ -1,0 +1,429 @@
+<template-content>
+  <h1>Comprehensive Filtering Options Demo</h1>
+  <p>This template demonstrates all available filtering options and their usage patterns.</p>
+
+  <div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+      <h2>Basic Filter Types</h2>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <!-- Static Dropdown -->
+        <div class="col-md-3">
+          <div class="card h-100">
+            <div class="card-header">
+              <h5>Static Dropdown</h5>
+            </div>
+            <div class="card-body">
+              {{filter
+              type="dropdown";
+              id="staticDropdown";
+              label="Product Category";
+              param="Category";
+              values="Electronics,Clothing,Accessories,Furniture,All";
+              default="All";
+              affects="staticChartDemo"
+              }}
+              <small class="text-muted mt-2 d-block">
+                Static dropdown with predefined values
+              </small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Button Group -->
+        <div class="col-md-3">
+          <div class="card h-100">
+            <div class="card-header">
+              <h5>Button Group</h5>
+            </div>
+            <div class="card-body">
+              {{filter
+              type="button";
+              id="buttonGroup";
+              label="Time Period";
+              param="Period";
+              values="day,week,month,year";
+              labels="Daily,Weekly,Monthly,Yearly";
+              default="month";
+              affects="staticChartDemo"
+              }}
+              <small class="text-muted mt-2 d-block">
+                Button group with custom labels
+              </small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Date Picker -->
+        <div class="col-md-3">
+          <div class="card h-100">
+            <div class="card-header">
+              <h5>Date Picker</h5>
+            </div>
+            <div class="card-body">
+              {{filter
+              type="date";
+              id="datePicker";
+              label="Start Date";
+              param="StartDate";
+              default="2023-01-01";
+              affects="staticChartDemo,dbChartDemo"
+              }}
+              <small class="text-muted mt-2 d-block">
+                Calendar date picker filter
+              </small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Number Input -->
+        <div class="col-md-3">
+          <div class="card h-100">
+            <div class="card-header">
+              <h5>Number Input</h5>
+            </div>
+            <div class="card-body">
+              {{filter
+              type="number";
+              id="numberFilter";
+              label="Minimum Price";
+              param="MinPrice";
+              min="0";
+              max="1000";
+              step="10";
+              default="100";
+              affects="staticChartDemo,dbChartDemo"
+              }}
+              <small class="text-muted mt-2 d-block">
+                Numeric input with min/max/step
+              </small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header bg-success text-white">
+      <h2>Database-Sourced Filters</h2>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <!-- DB-Sourced Territory Filter -->
+        <div class="col-md-4">
+          <div class="card h-100">
+            <div class="card-header">
+              <h5>DB Territory Filter</h5>
+            </div>
+            <div class="card-body">
+              {{filter
+              type="dropdown";
+              id="territoryFilter";
+              label="Sales Territory";
+              param="TerritoryID";
+              dataSource="SELECT TerritoryID, Name FROM Sales.SalesTerritory ORDER BY Name";
+              valueField="TerritoryID";
+              textField="Name";
+              affects="dbChartDemo"
+              }}
+              <small class="text-muted mt-2 d-block">
+                Options populated from database query
+              </small>
+            </div>
+          </div>
+        </div>
+
+        <!-- DB-Sourced Product Categories -->
+        <div class="col-md-4">
+          <div class="card h-100">
+            <div class="card-header">
+              <h5>DB Product Categories</h5>
+            </div>
+            <div class="card-body">
+              {{filter
+              type="dropdown";
+              id="productCategoryFilter";
+              label="Product Category";
+              param="ProductCategoryID";
+              dataSource="SELECT ProductCategoryID, Name FROM Production.ProductCategory ORDER BY Name";
+              valueField="ProductCategoryID";
+              textField="Name";
+              affects="dbChartDemo"
+              }}
+              <small class="text-muted mt-2 d-block">
+                Product categories from database
+              </small>
+            </div>
+          </div>
+        </div>
+
+        <!-- DB-Sourced Year Filter -->
+        <div class="col-md-4">
+          <div class="card h-100">
+            <div class="card-header">
+              <h5>DB Year Filter</h5>
+            </div>
+            <div class="card-body">
+              {{filter
+              type="dropdown";
+              id="yearFilter";
+              label="Order Year";
+              param="Year";
+              dataSource="SELECT DISTINCT YEAR(OrderDate) AS YearValue FROM Sales.SalesOrderHeader ORDER BY YearValue DESC";
+              valueField="YearValue";
+              textField="YearValue";
+              affects="dbChartDemo"
+              }}
+              <small class="text-muted mt-2 d-block">
+                Distinct years from order dates
+              </small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header bg-info text-white">
+      <h2>Advanced Filter Options</h2>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <!-- Required Dropdown -->
+        <div class="col-md-4">
+          <div class="card h-100">
+            <div class="card-header">
+              <h5>Required Dropdown</h5>
+            </div>
+            <div class="card-body">
+              {{filter
+              type="dropdown";
+              id="requiredDropdown";
+              label="Customer Type (Required)";
+              param="CustomerType";
+              values="S,I";
+              labels="Store,Individual";
+              required="true";
+              default="S";
+              affects="advancedChartDemo"
+              }}
+              <small class="text-muted mt-2 d-block">
+                Required dropdown with no empty option
+              </small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Text Input Filter -->
+        <div class="col-md-4">
+          <div class="card h-100">
+            <div class="card-header">
+              <h5>Text Input</h5>
+            </div>
+            <div class="card-body">
+              {{filter
+              type="text";
+              id="textFilter";
+              label="Search Term";
+              param="SearchTerm";
+              default="bike";
+              affects="advancedChartDemo"
+              }}
+              <small class="text-muted mt-2 d-block">
+                Text input with Apply button
+              </small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Multiple Date Range -->
+        <div class="col-md-4">
+          <div class="card h-100">
+            <div class="card-header">
+              <h5>Date Range</h5>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-6">
+                  {{filter
+                  type="date";
+                  id="startDateRange";
+                  label="From";
+                  param="DateFrom";
+                  default="2023-01-01";
+                  affects="advancedChartDemo"
+                  }}
+                </div>
+                <div class="col-md-6">
+                  {{filter
+                  type="date";
+                  id="endDateRange";
+                  label="To";
+                  param="DateTo";
+                  default="2023-12-31";
+                  affects="advancedChartDemo"
+                  }}
+                </div>
+              </div>
+              <small class="text-muted mt-2 d-block">
+                Date range with two filters
+              </small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts that respond to filters -->
+  <div class="row">
+    <!-- Static Chart Demo -->
+    <div class="col-md-6">
+      <div class="card mb-4">
+        <div class="card-header">
+          <h3>Static Chart Demo</h3>
+          <small class="text-muted">Responds to basic filters</small>
+        </div>
+        <div class="card-body">
+          {{id="staticChartDemo";
+          query="SELECT
+          CASE
+          WHEN @Period = 'day' THEN 'Daily'
+          WHEN @Period = 'week' THEN 'Weekly'
+          WHEN @Period = 'month' THEN 'Monthly'
+          ELSE 'Yearly'
+          END + ' ' +
+          CASE
+          WHEN @Category = 'All' THEN 'All Categories'
+          ELSE @Category
+          END AS Label,
+          (@MinPrice / 10) * 5 AS Value";
+          representation="barchart";
+          legends=["Label"];
+          series=["Value"];
+          formatting={
+          title: "Filter Demo Chart",
+          borderWidth: 2,
+          backgroundColor: "rgba(54, 162, 235, 0.2)",
+          borderColor: "rgba(54, 162, 235, 1)"
+          }
+          }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Database Chart Demo -->
+    <div class="col-md-6">
+      <div class="card mb-4">
+        <div class="card-header">
+          <h3>Database Chart Demo</h3>
+          <small class="text-muted">Responds to database-sourced filters</small>
+        </div>
+        <div class="card-body">
+          {{id="dbChartDemo";
+          query="SELECT
+          pc.Name AS Category,
+          SUM(sod.LineTotal) AS Revenue
+          FROM Sales.SalesOrderDetail sod
+          INNER JOIN Sales.SalesOrderHeader soh ON sod.SalesOrderID = soh.SalesOrderID
+          INNER JOIN Production.Product p ON sod.ProductID = p.ProductID
+          INNER JOIN Production.ProductSubcategory ps ON p.ProductSubcategoryID = ps.ProductSubcategoryID
+          INNER JOIN Production.ProductCategory pc ON ps.ProductCategoryID = pc.ProductCategoryID
+          WHERE (@TerritoryID IS NULL OR soh.TerritoryID = @TerritoryID)
+          AND (@Year IS NULL OR YEAR(soh.OrderDate) = @Year)
+          AND (@ProductCategoryID IS NULL OR pc.ProductCategoryID = @ProductCategoryID)
+          AND (@StartDate IS NULL OR soh.OrderDate >= @StartDate)
+          AND sod.UnitPrice >= @MinPrice
+          GROUP BY pc.Name
+          ORDER BY Revenue DESC";
+          representation="piechart";
+          series=["Revenue"];
+          formatting={
+          title: "Sales by Category",
+          showValues: true,
+          showPercentages: true,
+          valuePosition: "inside"
+          }
+          }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Advanced Chart Demo -->
+  <div class="row">
+    <div class="col-md-12">
+      <div class="card mb-4">
+        <div class="card-header">
+          <h3>Advanced Chart Demo</h3>
+          <small class="text-muted">Responds to advanced filters</small>
+        </div>
+        <div class="card-body">
+          {{id="advancedChartDemo";
+          query="SELECT
+          MONTH(soh.OrderDate) AS OrderMonth,
+          SUM(sod.LineTotal) AS Revenue
+          FROM Sales.SalesOrderDetail sod
+          INNER JOIN Sales.SalesOrderHeader soh ON sod.SalesOrderID = soh.SalesOrderID
+          INNER JOIN Production.Product p ON sod.ProductID = p.ProductID
+          WHERE soh.CustomerType = @CustomerType
+          AND (@SearchTerm = '' OR p.Name LIKE '%' + @SearchTerm + '%')
+          AND (soh.OrderDate BETWEEN @DateFrom AND @DateTo)
+          GROUP BY MONTH(soh.OrderDate)
+          ORDER BY OrderMonth";
+          representation="linechart";
+          legends=["OrderMonth"];
+          series=["Revenue"];
+          formatting={
+          title: "Monthly Revenue Trend",
+          showPoints: true,
+          tension: 20,
+          colors: ["rgba(75, 192, 192, 1)"]
+          }
+          }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Example with a data table output -->
+  <div class="row">
+    <div class="col-md-12">
+      <div class="card mb-4">
+        <div class="card-header">
+          <h3>Filtered Data Table</h3>
+          <small class="text-muted">Shows table filtered by all parameters</small>
+        </div>
+        <div class="card-body">
+          {{id="filteredTable";
+          query="SELECT TOP 10
+          p.Name AS ProductName,
+          p.ProductNumber,
+          pc.Name AS Category,
+          p.ListPrice,
+          p.Color,
+          st.Name AS Territory
+          FROM Production.Product p
+          INNER JOIN Production.ProductSubcategory ps ON p.ProductSubcategoryID = ps.ProductSubcategoryID
+          INNER JOIN Production.ProductCategory pc ON ps.ProductCategoryID = pc.ProductCategoryID
+          CROSS JOIN Sales.SalesTerritory st
+          WHERE (@Category = 'All' OR pc.Name = @Category)
+          AND (@TerritoryID IS NULL OR st.TerritoryID = @TerritoryID)
+          AND (@ProductCategoryID IS NULL OR pc.ProductCategoryID = @ProductCategoryID)
+          AND p.ListPrice >= @MinPrice
+          AND (@SearchTerm = '' OR p.Name LIKE '%' + @SearchTerm + '%')
+          ORDER BY p.ListPrice DESC";
+          representation="table";
+          formatting={
+          row: { index: 2, style: "background-color: #f8f9fa;" },
+          column: { nameContains: "Price", style: "font-weight: bold; color: #28a745;" }
+          }
+          }}
+        </div>
+      </div>
+    </div>
+  </div>
+</template-content>

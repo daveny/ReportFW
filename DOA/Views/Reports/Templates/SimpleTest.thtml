@@ -1,0 +1,29 @@
+<template-content>
+  <h1>Simple Filter Test</h1>
+
+  <div class="row">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">
+          <h2>Number Input</h2>
+        </div>
+        <div class="card-body">
+          {{filter type="dropdown"; id="numberFilter"; label="Select Number"; param="Number"; values="1,2,3,4,5"; default="1"}}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mt-4">
+    <div class="col-md-12">
+      <div class="card">
+        <div class="card-header">
+          <h2>Simple Chart</h2>
+        </div>
+        <div class="card-body">
+          {{id="simpleChart"; query="SELECT 'Value ' + CAST(@Number AS VARCHAR) AS Label, @Number * 10 AS Value"; representation="barchart"; series=["Value"]; formatting={title: "Simple Test Chart"}}}
+        </div>
+      </div>
+    </div>
+  </div>
+</template-content>

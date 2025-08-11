@@ -1,0 +1,76 @@
+<template-content>
+  <h1>DOA</h1>
+  <p>This template demonstrates a single filter affecting a single chart.</p>
+
+  <!-- Explicit static filter -->
+  <!--<div class="filter-component">
+    <label for="yearFilter">Select Year</label>
+    <select id="yearFilter" name="Year" class="form-control filter-dropdown" data-param-name="Year">
+      <option value="">-- Select --</option>
+      <option value="2011">2011</option>
+      <option value="2012">2012</option>
+      <option value="2013" selected="">2013</option>
+      <option value="2014">2014</option>
+    </select>
+  </div>-->
+
+  <!--{{filter
+  type="dropdown";
+  id="yearFilter";
+  label="Select Year";
+  param="Year";
+  values="2011,2012,2013,2014";
+  default="2013";
+  affects="yearlyChart"
+  }}-->
+
+  {{
+  query="SELECT DISTINCT YEAR(OrderDate) AS Year FROM Sales.SalesOrderHeader ORDER BY Year DESC";
+  representation="filter";
+  type="dropdown";
+  id="yearFilter";
+  label="Select Year";
+  param="Year";
+  valueField="Year";
+  textField="Year";
+  default="2013";
+  affects="yearlyChart"
+  }}
+
+  <div class="card mt-4">
+    <div class="card-header">
+      <h3>Yearly Revenue Chart</h3>
+    </div>
+    <div class="card-body">
+      {{id="yearlyChart";
+      query="SELECT
+      MONTH(OrderDate) AS OrderMonth,
+      CASE
+      WHEN MONTH(OrderDate) = 1 THEN 'January'
+      WHEN MONTH(OrderDate) = 2 THEN 'February'
+      WHEN MONTH(OrderDate) = 3 THEN 'March'
+      WHEN MONTH(OrderDate) = 4 THEN 'April'
+      WHEN MONTH(OrderDate) = 5 THEN 'May'
+      WHEN MONTH(OrderDate) = 6 THEN 'June'
+      WHEN MONTH(OrderDate) = 7 THEN 'July'
+      WHEN MONTH(OrderDate) = 8 THEN 'August'
+      WHEN MONTH(OrderDate) = 9 THEN 'September'
+      WHEN MONTH(OrderDate) = 10 THEN 'October'
+      WHEN MONTH(OrderDate) = 11 THEN 'November'
+      WHEN MONTH(OrderDate) = 12 THEN 'December'
+      END AS MonthName,
+      SUM(TotalDue) AS Revenue
+      FROM Sales.SalesOrderHeader
+      WHERE (@Year IS NULL OR YEAR(OrderDate) = @Year)
+      GROUP BY MONTH(OrderDate)
+      ORDER BY MONTH(OrderDate)";
+      representation="barchart";
+      legends=["MonthName"];
+      series=["Revenue"];
+      formatting={
+      title: "Monthly Revenue for Selected Year"
+      }
+      }}
+    </div>
+  </div>
+</template-content>

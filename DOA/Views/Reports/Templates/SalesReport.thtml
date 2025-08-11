@@ -1,0 +1,114 @@
+<template-content>
+  <h1>Sales Data Analysis Report</h1>
+
+  <div class="row">
+    <div class="col-md-3">
+      <!-- Year filter as dropdown -->
+      {{ filter type="dropdown"; id="yearFilter"; label="Select Year"; param="Year";
+      dataSource="SELECT DISTINCT YEAR(OrderDate) AS YearValue FROM Sales.SalesOrderHeader ORDER BY YearValue DESC";
+      valueField="YearValue"; textField="YearValue"; default="2013"; affects="monthlySales,categoryBreakdown" }}
+    </div>
+
+    <div class="col-md-3">
+      <!-- Territory filter as dropdown -->
+      {{ filter type="dropdown"; id="territoryFilter"; label="Sales Territory"; param="Territory";
+      dataSource="SELECT TerritoryID, Name FROM Sales.SalesTerritory ORDER BY Name";
+      valueField="TerritoryID"; textField="Name";
+      affects="monthlySales,categoryBreakdown" }}
+    </div>
+
+    <div class="col-md-3">
+      <!-- Customer Type filter as button group -->
+      {{ filter type="button"; id="customerFilter"; label="Customer Type"; param="CustomerType";
+      values="S,I"; labels="Store,Individual"; default="S";
+      affects="monthlySales,categoryBreakdown" }}
+    </div>
+
+    <div class="col-md-3">
+      <!-- Date Range filter with calendar -->
+      {{ filter type="calendar"; id="startDateFilter"; label="Order Date From"; param="StartDate";
+      default="2013-01-01"; affects="monthlySales,categoryBreakdown" }}
+    </div>
+  </div>
+
+  <div class="row mt-4">
+    <div class="col-md-12">
+      <div class="card">
+        <div class="card-header">
+          <h3>Monthly Sales Trend</h3>
+        </div>
+        <div class="card-body">
+          <!-- Chart with filters applied -->
+          {{ id="monthlySales";
+          query="SELECT MONTH(OrderDate) AS OrderMonth, SUM(TotalDue) AS Revenue
+          FROM Sales.SalesOrderHeader
+          WHERE YEAR(OrderDate) = @Year
+          AND (@Territory IS NULL OR TerritoryID = @Territory)
+          AND (@StartDate IS NULL OR OrderDate >= @StartDate)
+          AND (@CustomerType IS NULL OR CustomerType = @CustomerType)
+          GROUP BY MONTH(OrderDate)
+          ORDER BY OrderMonth";
+          representation="linechart";
+          series=["Revenue"];
+          formatting={ title: "Monthly Sales Trend", showPoints: true, tension: 20 } }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mt-4">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">
+          <h3>Product Category Breakdown</h3>
+        </div>
+        <div class="card-body">
+          <!-- Pie chart with filters applied -->
+          {{ id="categoryBreakdown";
+          query="SELECT pc.Name AS Category, SUM(sod.LineTotal) AS Revenue
+          FROM Sales.SalesOrderDetail sod
+          INNER JOIN Sales.SalesOrderHeader soh ON sod.SalesOrderID = soh.SalesOrderID
+          INNER JOIN Production.Product p ON sod.ProductID = p.ProductID
+          INNER JOIN Production.ProductSubcategory ps ON p.ProductSubcategoryID = ps.ProductSubcategoryID
+          INNER JOIN Production.ProductCategory pc ON ps.ProductCategoryID = pc.ProductCategoryID
+          WHERE YEAR(soh.OrderDate) = @Year
+          AND (@Territory IS NULL OR soh.TerritoryID = @Territory)
+          AND (@StartDate IS NULL OR soh.OrderDate >= @StartDate)
+          AND (@CustomerType IS NULL OR soh.CustomerType = @CustomerType)
+          GROUP BY pc.Name
+          ORDER BY Revenue DESC";
+          representation="piechart";
+          series=["Revenue"];
+          formatting={ title: "Sales by Product Category", showValues: true, showPercentages: true, valuePosition: "inside" } }}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">
+          <h3>Top Selling Products</h3>
+        </div>
+        <div class="card-body">
+          <!-- Data table with filters applied -->
+          {{ id="topProducts";
+          query="SELECT TOP 10 p.Name AS ProductName, p.ProductNumber,
+          SUM(sod.OrderQty) AS QuantitySold,
+          SUM(sod.LineTotal) AS Revenue
+          FROM Sales.SalesOrderDetail sod
+          INNER JOIN Sales.SalesOrderHeader soh ON sod.SalesOrderID = soh.SalesOrderID
+          INNER JOIN Production.Product p ON sod.ProductID = p.ProductID
+          WHERE YEAR(soh.OrderDate) = @Year
+          AND (@Territory IS NULL OR soh.TerritoryID = @Territory)
+          AND (@StartDate IS NULL OR soh.OrderDate >= @StartDate)
+          AND (@CustomerType IS NULL OR soh.CustomerType = @CustomerType)
+          GROUP BY p.Name, p.ProductNumber
+          ORDER BY Revenue DESC";
+          representation="table";
+          formatting={ row: { index: 2, style: "background-color: #f9f9f9;" },
+          column: { nameContains: "Revenue", style: "font-weight: bold; color: #28a745;" } } }}
+        </div>
+      </div>
+    </div>
+  </div>
+</template-content>

@@ -1,0 +1,43 @@
+Debug log initialized at 2025. 07. 30. 13:58:59
+2025-07-30 13:58:59 - Starting RenderReport for template: CAP
+2025-07-30 13:58:59 - Rendering report with 0 filter values
+2025-07-30 13:58:59 - Filter values from request:
+2025-07-30 13:58:59 - Original template content (first 200 chars):
+2025-07-30 13:58:59 - <template-content>
+  <h1>User Report</h1>
+  <div class="report-section">
+    <h2>Active Users</h2>
+    {{ query="SELECT * FROM [HumanResources].[Department]"; representation="table" }}
+  </div>
+  <div
+2025-07-30 13:58:59 - Starting filter processing with pattern: \{\{filter\s+(.*?)\}\}
+2025-07-30 13:58:59 - Sample of content: 
+  <h1>User Report</h1>
+  <div class="report-section">
+    <h2>Active Users</h2>
+    {{ query="SELECT * FROM [HumanResources].[Department]"; representation="table" }}
+  </div>
+  <div style="display: f
+2025-07-30 13:58:59 - Found 0 filter matches
+2025-07-30 13:58:59 - Processing parameterized queries
+2025-07-30 13:58:59 - Found 3 tokens with possible queries
+2025-07-30 13:58:59 - Processing query token: {{ query="SELECT * FROM [HumanResources].[Departme...
+2025-07-30 13:58:59 - Extracted query: SELECT * FROM [HumanResources].[Department]...
+2025-07-30 13:58:59 - Found 0 parameters in query
+2025-07-30 13:58:59 - Token updated with parameter values
+2025-07-30 13:58:59 - Processing query token: {{ query="SELECT YEAR(soh.OrderDate) as OrderYear,...
+2025-07-30 13:58:59 - Extracted query: SELECT YEAR(soh.OrderDate) as OrderYear, st.CountryRegionCode, SUM(sod.LineTotal) as LineTotal, COUN...
+2025-07-30 13:58:59 - Found 0 parameters in query
+2025-07-30 13:58:59 - Token updated with parameter values
+2025-07-30 13:58:59 - Processing query token: {{ query="SELECT YEAR(soh.OrderDate) as OrderYear,...
+2025-07-30 13:58:59 - Extracted query: SELECT YEAR(soh.OrderDate) as OrderYear, SUM(sod.LineTotal) as LineTotal, COUNT(sod.SalesOrderID) AS...
+2025-07-30 13:58:59 - Found 0 parameters in query
+2025-07-30 13:58:59 - Token updated with parameter values
+2025-07-30 13:58:59 - Filtered content (first 200 chars):
+2025-07-30 13:58:59 - 
+  <h1>User Report</h1>
+  <div class="report-section">
+    <h2>Active Users</h2>
+    {{query="SELECT * FROM [HumanResources].[Department]"; representation="table"}}
+  </div>
+  <div style="display: fle

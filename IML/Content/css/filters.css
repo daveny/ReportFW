@@ -1,0 +1,189 @@
+﻿/* Filter Controls Styling */
+.filter-section {
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    padding: 15px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.filter-control {
+    margin-bottom: 15px;
+}
+
+    .filter-control label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 600;
+        color: #495057;
+    }
+
+.filter-dropdown {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+    .filter-dropdown:focus {
+        border-color: #80bdff;
+        outline: 0;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+
+.filter-button-group {
+    width: 100%;
+    display: flex;
+}
+
+.filter-button {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #ced4da;
+    background-color: #f8f9fa;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+}
+
+    .filter-button:first-child {
+        border-top-left-radius: 4px;
+        border-bottom-left-radius: 4px;
+    }
+
+    .filter-button:last-child {
+        border-top-right-radius: 4px;
+        border-bottom-right-radius: 4px;
+    }
+
+    .filter-button.btn-primary {
+        background-color: #007bff;
+        border-color: #007bff;
+        color: white;
+    }
+
+    .filter-button.btn-secondary {
+        background-color: #f8f9fa;
+        border-color: #ced4da;
+        color: #495057;
+    }
+
+    .filter-button:hover {
+        z-index: 1;
+    }
+
+    .filter-button.btn-primary:hover {
+        background-color: #0069d9;
+        border-color: #0062cc;
+    }
+
+    .filter-button.btn-secondary:hover {
+        background-color: #e2e6ea;
+        border-color: #dae0e5;
+    }
+
+.filter-text {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ced4da;
+    border-radius: 4px 0 0 4px;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+    .filter-text:focus {
+        border-color: #80bdff;
+        outline: 0;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+
+.filter-apply-btn {
+    border-radius: 0 4px 4px 0;
+    background-color: #6c757d;
+    color: white;
+    border: 1px solid #6c757d;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+}
+
+    .filter-apply-btn:hover {
+        background-color: #5a6268;
+        border-color: #545b62;
+    }
+
+.datepicker {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+    .datepicker:focus {
+        border-color: #80bdff;
+        outline: 0;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+
+/* Chart placeholders styling */
+.chart-placeholder {
+    min-height: 200px;
+    border: 1px dashed #ccc;
+    margin: 15px 0;
+    padding: 15px;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+    .chart-placeholder .alert {
+        width: 100%;
+        max-width: 500px;
+        margin: 0 auto;
+    }
+
+/* Enhanced card styling */
+.card {
+    border: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #eee;
+    padding: 12px 15px;
+}
+
+    .card-header h3 {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #343a40;
+    }
+
+.card-body {
+    padding: 20px;
+}
+
+/* Report container */
+.report-container {
+    margin-top: 20px;
+    margin-bottom: 40px;
+}
+
+/* Loading indicator for charts */
+.chart-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+}
+
+    .chart-loading .spinner-border {
+        margin-right: 10px;
+    }
