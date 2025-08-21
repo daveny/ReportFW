@@ -1,0 +1,229 @@
+﻿@using Core.Models
+@{
+    ViewBag.Title = "Reports";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var allReports = ViewBag.AllReports as List<ReportTile> ?? new List<ReportTile>();
+    var devReports = ViewBag.DevReports as List<ReportTile> ?? new List<ReportTile>();
+}
+
+<style>
+    /* Styles for the report tiles */
+    .report-tiles-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 2rem;
+    }
+
+    .report-tile {
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        text-decoration: none;
+        color: #333;
+    }
+
+        .report-tile:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+            color: #333;
+        }
+
+    .tile-header {
+        padding: 1.5rem;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #e9ecef;
+        text-align: center;
+        font-size: 1.25rem;
+        font-weight: 600;
+    }
+
+    .tile-body {
+        padding: 1.5rem;
+        flex-grow: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .tile-footer {
+        padding: 1rem;
+        background-color: #f8f9fa;
+        border-top: 1px solid #e9ecef;
+        text-align: right;
+    }
+
+    .favorite-star {
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: #ced4da;
+        transition: color 0.2s ease, transform 0.2s ease;
+    }
+
+        .favorite-star.is-favorite {
+            color: #ffc107; /* Yellow for favorited */
+        }
+
+        .favorite-star:hover {
+            transform: scale(1.2);
+        }
+
+    /* Tab navigation for the list */
+    .report-nav .nav-link {
+        font-size: 1.2rem;
+    }
+
+        .report-nav .nav-link.active {
+            font-weight: bold;
+            color: #007bff;
+        }
+</style>
+
+<div class="container-fluid">
+    <h1 class="my-4">Reports</h1>
+
+    @Html.AntiForgeryToken()
+
+    <!-- Tab Navigation -->
+    <ul class="nav nav-tabs report-nav mb-4" id="reportTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="all-reports-tab" data-bs-toggle="tab" data-bs-target="#all-reports" type="button" role="tab">All Reports</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="my-reports-tab" data-bs-toggle="tab" data-bs-target="#my-reports" type="button" role="tab">My Reports</button>
+        </li>
+        @if (devReports.Any())
+        {
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="dev-reports-tab" data-bs-toggle="tab" data-bs-target="#dev-reports" type="button" role="tab">DEV Reports</button>
+            </li>
+        }
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="reportTabContent">
+        <!-- All Reports Pane -->
+        <div class="tab-pane fade show active" id="all-reports" role="tabpanel">
+            <div class="report-tiles-container">
+                @foreach (var report in allReports)
+                {
+                    <div class="report-tile" data-report-name="@report.Name" data-is-dev="false">
+                        <a href="@Url.Action("RenderReport", "Report", new { templateName = report.Name })" class="tile-header">
+                            @report.Name
+                        </a>
+                        <div class="tile-footer">
+                            <!-- JAVÍTVA: Font Awesome 5 ikon osztályok -->
+                            <i class="favorite-star @(report.IsFavorite ? "fas fa-star is-favorite" : "far fa-star")"></i>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- My Reports Pane -->
+        <div class="tab-pane fade" id="my-reports" role="tabpanel">
+            <div class="report-tiles-container">
+                @foreach (var report in allReports.Where(r => r.IsFavorite))
+                {
+                    <div class="report-tile" data-report-name="@report.Name" data-is-dev="false">
+                        <a href="@Url.Action("RenderReport", "Report", new { templateName = report.Name })" class="tile-header">
+                            @report.Name
+                        </a>
+                        <div class="tile-footer">
+                            <!-- JAVÍTVA: Font Awesome 5 ikon osztályok -->
+                            <i class="favorite-star fas fa-star is-favorite"></i>
+                        </div>
+                    </div>
+                }
+                @foreach (var report in devReports.Where(r => r.IsFavorite))
+                {
+                    <div class="report-tile" data-report-name="@report.Name" data-is-dev="true">
+                        <a href="@Url.Action("RenderReportDEV", "Report", new { templateName = report.Name })" class="tile-header">
+                            @report.Name (DEV)
+                        </a>
+                        <div class="tile-footer">
+                            <!-- JAVÍTVA: Font Awesome 5 ikon osztályok -->
+                            <i class="favorite-star fas fa-star is-favorite"></i>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- DEV Reports Pane -->
+        @if (devReports.Any())
+        {
+            <div class="tab-pane fade" id="dev-reports" role="tabpanel">
+                <div class="report-tiles-container">
+                    @foreach (var report in devReports)
+                    {
+                        <div class="report-tile" data-report-name="@report.Name" data-is-dev="true">
+                            <a href="@Url.Action("RenderReportDEV", "Report", new { templateName = report.Name })" class="tile-header">
+                                @report.Name (DEV)
+                            </a>
+                            <div class="tile-footer">
+                                <!-- JAVÍTVA: Font Awesome 5 ikon osztályok -->
+                                <i class="favorite-star @(report.IsFavorite ? "fas fa-star is-favorite" : "far fa-star")"></i>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@section scripts {
+    <script>
+    $(document).ready(function () {
+        // Handle click on favorite star
+        $('.favorite-star').on('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            var starIcon = $(this);
+            var tile = starIcon.closest('.report-tile');
+            var reportName = tile.data('report-name');
+
+            // Optimistic UI update for Font Awesome 5
+            var isBecomingFavorite = starIcon.hasClass('far');
+            starIcon.toggleClass('far fas').toggleClass('is-favorite');
+
+
+            // Send request to server
+            $.ajax({
+                url: '@Url.Action("ToggleFavorite", "Report")',
+                type: 'POST',
+                data: { reportName: reportName },
+                success: function (response) {
+                    if (!response.success) {
+                        // Revert on error
+                        starIcon.toggleClass('far fas').toggleClass('is-favorite');
+                        alert('Error: ' + response.message);
+                    } else {
+                        // Update all matching tiles on the page
+                        $('.report-tile[data-report-name="' + reportName + '"]').each(function() {
+                            var currentStar = $(this).find('.favorite-star');
+                            if (response.isFavorite) {
+                                currentStar.removeClass('far').addClass('fas is-favorite');
+                            } else {
+                                currentStar.removeClass('fas is-favorite').addClass('far');
+                            }
+                        });
+                        // A simple page reload is easier than complex DOM manipulation for the My Reports tab
+                        location.reload();
+                    }
+                },
+                error: function () {
+                    // Revert on error
+                    starIcon.toggleClass('far fas').toggleClass('is-favorite');
+                    alert('An unexpected error occurred.');
+                }
+            });
+        });
+    });
+    </script>
+}
