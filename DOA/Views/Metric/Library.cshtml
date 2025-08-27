@@ -1,0 +1,119 @@
+﻿@model List<Core.Models.MetricTile>
+@{ ViewBag.Title = "Metric Library"; }
+
+@Html.AntiForgeryToken()
+
+<div class="container-fluid">
+    <h1 class="my-4">Metric Library</h1>
+    <div class="report-tiles-container">
+        @foreach (var metric in Model)
+        {
+            <a href="@Url.Action("Display", "Metric", new { metricName = metric.FileName })" class="report-tile-link">
+                <div class="report-tile" data-metric-name="@metric.FileName">
+                    <div class="tile-header">@metric.Name</div>
+                    <div class="tile-body">
+                        <p class="tile-description">@metric.Description</p>
+                    </div>
+                    <div class="tile-footer">
+                        <span class="tile-owner">Owner: @metric.Owner</span>
+                        <i class="favorite-star @(metric.IsFavorite ? "fas fa-star is-favorite" : "far fa-star")"></i>
+                    </div>
+                </div>
+            </a>
+        }
+    </div>
+</div>
+
+@section scripts {
+    <script>
+        $(document).ready(function () {
+            $('.favorite-star').on('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                var starIcon = $(this);
+                var metricName = starIcon.closest('.report-tile').data('metric-name');
+                var token = $('input[name="__RequestVerificationToken"]').val();
+
+                $.ajax({
+                    url: '@Url.Action("ToggleFavorite", "Metric")',
+                    type: 'POST',
+                    data: { __RequestVerificationToken: token, metricName: metricName },
+                    success: function (response) {
+                        if (response.success) {
+                            starIcon.toggleClass('fas far is-favorite');
+                        } else { alert('Error: ' + response.message); }
+                    }
+                });
+            });
+        });
+    </script>
+    <style>
+        /* ÚJ: Stílus a linkhez, hogy a csempe kinézet megmaradjon */
+        .report-tile-link, .report-tile-link:hover {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .report-tiles-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 2rem;
+        }
+
+        .report-tile {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+            .report-tile:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            }
+
+        .tile-header {
+            padding: 1.5rem;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .tile-body {
+            padding: 1.5rem;
+            flex-grow: 1;
+        }
+
+        .tile-description {
+            color: #6c757d;
+        }
+
+        .tile-footer {
+            padding: 1rem;
+            background-color: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .tile-owner {
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+
+        .favorite-star {
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #ced4da;
+        }
+
+            .favorite-star.is-favorite {
+                color: #ffc107;
+            }
+    </style>
+}

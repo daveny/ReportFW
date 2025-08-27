@@ -1,0 +1,62 @@
+﻿@model Dictionary<Core.Models.MetricTile, MvcHtmlString>
+@{ ViewBag.Title = "My Metrics"; }
+
+<div class="container-fluid">
+    <h1 class="my-4">My Metrics</h1>
+    <p>Your personalized collection of favorite metrics.</p>
+
+    <div class="mymetrics-container">
+        @foreach (var entry in Model)
+        {
+            <div class="metric-widget">
+                <div class="metric-header">
+                    <h5>@entry.Key.Name</h5>
+                    <span>Owner: @entry.Key.Owner</span>
+                </div>
+                <div class="metric-content">
+                    @Html.Raw(entry.Value)
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@section styles {
+    <style>
+        .mymetrics-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 2rem;
+        }
+
+        .metric-widget {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            background: #fff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        .metric-header {
+            padding: 1rem 1.5rem;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+            .metric-header h5 {
+                margin: 0;
+            }
+
+            .metric-header span {
+                font-size: 0.8rem;
+                color: #6c757d;
+            }
+
+        .metric-content {
+            padding: 1.5rem;
+        }
+    </style>
+}

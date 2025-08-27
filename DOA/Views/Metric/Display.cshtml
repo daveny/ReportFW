@@ -1,0 +1,32 @@
+﻿@{
+    ViewBag.Title = ViewBag.MetricName ?? "Display Metric";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container-fluid">
+    <div class="metric-display-header my-4">
+        <h1>@ViewBag.MetricName</h1>
+        @if (!string.IsNullOrEmpty(ViewBag.MetricDescription))
+        {
+            <p class="lead text-muted">@ViewBag.MetricDescription</p>
+        }
+        @if (!string.IsNullOrEmpty(ViewBag.MetricOwner))
+        {
+            <p><small>Owner: @ViewBag.MetricOwner</small></p>
+        }
+    </div>
+
+    <hr />
+
+    <div class="metric-content-full">
+        @Html.Raw(ViewBag.RenderedMetric)
+    </div>
+</div>
+
+@section styles {
+    <style>
+        .metric-content-full .chart-container {
+            height: 60vh; /* Make the chart taller on its own page */
+        }
+    </style>
+}

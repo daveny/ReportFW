@@ -127,6 +127,8 @@
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
+    <Compile Include="Models\MetricController.cs" />
+    <Compile Include="Models\MetricTile.cs" />
     <Compile Include="Models\ReportTile.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -228,6 +230,10 @@
     <Content Include="Views\Reports\Templates\SafeTest.thtml" />
     <Content Include="Views\Reports\Templates\MinTest.thtml" />
     <Content Include="Views\Reports\Templates\CAP2.thtml" />
+    <Content Include="Views\Metrics\Templates\metric01.thtml" />
+    <Content Include="Views\Metric\Library.cshtml" />
+    <Content Include="Views\Metric\MyMetrics.cshtml" />
+    <Content Include="Views\Metric\Display.cshtml" />
     <None Include="Views\Reports\Templates\Test.thtml" />
     <Content Include="Views\Report\RenderReport.cshtml" />
     <Content Include="Views\Report\List.cshtml" />
