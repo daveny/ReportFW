@@ -1,387 +1,434 @@
-﻿@using System.IO
-@{
-    Layout = "~/Views/Shared/_Layout.cshtml";
+﻿@{
     ViewBag.Title = "Metric Editor";
-
-
-    var templateRoot = Server.MapPath("~/Views/Metrics/Templates");
-    var files = Directory.Exists(templateRoot)
-    ? Directory.GetFiles(templateRoot, "*.thtml").Select(Path.GetFileName).OrderBy(x => x).ToList()
-    : new List<string>();
+    Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<div class="container my-4">
-    <h2 class="mb-3">Metric Editor</h2>
+@section styles {
+    <style>
+        :root {
+            --card-bg: var(--bs-body-bg, #fff);
+        }
 
+        .page {
+            display: grid;
+            grid-template-rows: auto 1fr;
+            gap: 16px;
+        }
 
-    @Html.AntiForgeryToken()
+        .top {
+            display: grid;
+            grid-template-columns: 440px 1fr;
+            gap: 16px;
+            align-items: start;
+        }
 
+        .bottom {
+        }
 
-    <!-- Fájlválasztó / Műveletek -->
-    <div class="card mb-3">
-        <div class="card-body row g-3 align-items-end">
-            <div class="col-md-4">
-                <label class="form-label">Meglévő metrika</label>
-                <select id="ddlFiles" class="form-select">
-                    <option value="">-- Válassz --</option>
-                    @foreach (var f in files)
-                    {
-                        <option value="@f">@f</option>
-                    }
-                </select>
+        .card {
+            background: var(--card-bg);
+            border: 1px solid rgba(0,0,0,.08);
+            border-radius: 12px;
+            box-shadow: 0 1px 2px rgba(0,0,0,.04);
+        }
+
+            .card h5 {
+                margin: 0 0 10px 0;
+                font-weight: 600;
+            }
+
+            .card .body {
+                padding: 14px;
+            }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+
+        .row-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .row-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .muted {
+            color: #6c757d;
+            font-size: .9rem;
+        }
+
+        label {
+            font-weight: 600;
+        }
+
+        input[type="text"], select, textarea {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid rgba(0,0,0,.2);
+            border-radius: 8px;
+            background: var(--card-bg);
+        }
+
+            textarea#generatedCode {
+                height: 48vh;
+                font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+                font-size: 12.8px;
+            }
+
+            textarea#rawInput {
+                height: 18vh;
+                font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+                font-size: 12.8px;
+            }
+
+            textarea#querySql {
+                height: 18vh;
+                font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+                font-size: 12.8px;
+            }
+
+        iframe#previewFrame {
+            width: 100%;
+            height: 56vh;
+            border: 1px solid rgba(0,0,0,.12);
+            border-radius: 10px;
+            background: #fff;
+        }
+
+        .danger {
+            color: #b42318;
+        }
+
+        /* Razor escape: */
+        @@media (max-width: 1200px) {
+            .top {
+                grid-template-columns: 1fr;
+            }
+
+            textarea#generatedCode {
+                height: 34vh;
+            }
+
+            iframe#previewFrame {
+                height: 50vh;
+            }
+        }
+    </style>
+}
+
+<!-- Anti-forgery token (cookie + hidden input) -->
+<div id="af-token" style="display:none">@Html.AntiForgeryToken()</div>
+
+<div class="page">
+    <div class="top">
+        <!-- LEFT: inputs -->
+        <div class="card">
+            <div class="body">
+                <h5>Metrika kiválasztás / fájlkezelés</h5>
+                <div class="row">
+                    <div class="row-3" id="metricPickerRow">
+                        <div>
+                            <label for="metricSelect">Metrika</label>
+                            <select id="metricSelect"><option value="">– betöltés… –</option></select>
+                        </div>
+                        <div>
+                            <label for="metricName">Fájlnév</label>
+                            <input id="metricName" type="text" placeholder="pl. metric01.thtml" />
+                        </div>
+                        <div class="btn-row" style="align-items:end">
+                            <button id="btnRefreshList" class="btn btn-outline-secondary" type="button">Lista frissítése</button>
+                            <button id="btnLoad" class="btn btn-outline-secondary" type="button">Betöltés</button>
+                            <button id="btnSave" class="btn btn-outline-secondary" type="button">Mentés</button>
+                            <button id="btnSaveAs" class="btn btn-outline-secondary" type="button">Mentés másként</button>
+                        </div>
+                    </div>
+                    <div class="kv">
+                        <label for="rawInput">Eredeti THML (meglévő szerkesztésekor)</label>
+                        <textarea id="rawInput" placeholder="Ha itt van tartalom, a generált chart blokk kicseréli a meglévő chart blokkot; a filter blokkok érintetlenek maradnak."></textarea>
+                        <div class="muted">Ha üres, csak a chart blokk kerül a kimenetbe.</div>
+                    </div>
+                </div>
+                <hr />
+                <h5>Chart blokk beállítások</h5>
+                <div class="row">
+                    <div class="row-2">
+                        <div><label for="series">Series (Y)</label><input id="series" type="text" value="TotalSales"></div>
+                        <div><label for="groupby">Group by (X csoport)</label><input id="groupby" type="text" value="CountryRegionCode"></div>
+                    </div>
+                    <div class="row-2">
+                        <div><label for="legends">Legends (X legend)</label><input id="legends" type="text" value="OrderYear"></div>
+                        <div><label for="title">Cím</label><input id="title" type="text" value="Revenue by Country and Year"></div>
+                    </div>
+                    <div>
+                        <label for="querySql">SQL (többsoros, nyers – csak a dupla idéző \" lesz escape-elve)</label>
+                        <textarea id="querySql"></textarea>
+                    </div>
+                    <div class="btn-row">
+                        <button id="btnBuild" class="btn btn-primary" type="button">Chart blokk generálása</button>
+                        <button id="btnGenerateThtml" class="btn btn-outline-primary" type="button">THML összeállítása</button>
+                    </div>
+                </div>
             </div>
-            <div class="col-md-2">
-                <button id="btnLoad" class="btn btn-outline-primary w-100" type="button">Betöltés</button>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Fájlnév (.thtml)</label>
-                <input id="txtFileName" class="form-control" placeholder="metric01.thtml" />
-            </div>
-            <div class="col-md-3 text-end">
-                <button id="btnNew" class="btn btn-outline-secondary me-2" type="button">Új metrika</button>
-                <button id="btnSave" class="btn btn-success" type="button">Mentés</button>
+        </div>
+
+        <!-- RIGHT: generated THML code -->
+        <div class="card">
+            <div class="body">
+                <h5>Generált .thtml kód</h5>
+                <textarea id="generatedCode" readonly></textarea>
+                <div class="muted">Parser hotfix aktív: vesszők és egyes idézők sem vágják el a query-t.</div>
             </div>
         </div>
     </div>
-    <div class="row g-3">
-        <!-- Bal hasáb: űrlapok -->
-        <div class="col-lg-6">
-            <div class="card mb-3">
-                <div class="card-header">Metaadatok</div>
-                <div class="card-body row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label">Metric Name</label>
-                        <input id="metricName" class="form-control" placeholder="Active Users" />
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Owner</label>
-                        <input id="owner" class="form-control" placeholder="David Nagy" />
-                    </div>
-                    <div class="col-md-12">
-                        <label class="form-label">Description</label>
-<textarea id="description" class="form-control" rows="2" placeholder="Shows sales totals from FR, DE, CA, and AU..."></textarea>
-                    </div>
-                </div>
-            </div>
 
-
-            <div class="card mb-3">
-                <div class="card-header">SQL Query</div>
-                <div class="card-body">
-<textarea id="sqlQuery" class="form-control font-monospace" rows="10" placeholder="SELECT ... FROM ... WHERE ... GROUP BY ..."></textarea>
-                </div>
+    <!-- BOTTOM: preview -->
+    <div class="bottom card">
+        <div class="body">
+            <h5>Élő előnézet</h5>
+            <div class="muted">A THML szerveroldali renderje után az iframe-ben újrainjektáljuk a scripteket, hogy tényleg lefussanak.</div>
+            <div style="margin:10px 0;" class="btn-row">
+                <button id="btnPreview" class="btn btn-success" type="button">Előnézet frissítése</button>
             </div>
-
-
-            <div class="card mb-3">
-                <div class="card-header">Megjelenítés</div>
-                <div class="card-body row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label">Típus</label>
-                        <select id="representation" class="form-select">
-                            <option value="table">Table</option>
-                            <option value="barchart" selected>Bar Chart</option>
-                            <option value="linechart">Line Chart</option>
-                            <option value="piechart">Pie Chart</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Érték oszlop (series)</label>
-                        <input id="series" class="form-control" placeholder="TotalSales" />
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Kategória (legends)</label>
-                        <input id="legends" class="form-control" placeholder="OrderYear" />
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Csoportosítás (groupBy)</label>
-                        <input id="groupBy" class="form-control" placeholder="CountryRegionCode" />
-                    </div>
-                </div>
-            </div>
-            <div class="card mb-3">
-                <div class="card-header">Formázás</div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <label class="form-label">Cím</label>
-                        <input id="title" class="form-control" placeholder="Revenue by Country and Year" />
-                    </div>
-                    <label class="form-label d-flex align-items-center justify-content-between">
-                        Érték alapú színezés (valueColors)
-                        <button id="btnAddColorPair" class="btn btn-sm btn-outline-secondary" type="button">Szín-érték pár hozzáadása</button>
-                    </label>
-                    <div id="valueColorPairs" class="vstack gap-2"></div>
-                </div>
-            </div>
-        </div>
-
-
-        <!-- Jobb hasáb: kód + előnézet -->
-        <div class="col-lg-6 d-flex flex-column gap-3">
-            <div class="card flex-grow-1">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span>Generált .thtml kód</span>
-                    <button id="btnRegenerate" class="btn btn-sm btn-outline-primary" type="button">Kód frissítése</button>
-                </div>
-                <div class="card-body d-flex flex-column">
-<textarea id="generatedCode" class="form-control font-monospace flex-grow-1" readonly></textarea>
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span>Élő előnézet</span>
-                    <button id="btnPreview" class="btn btn-sm btn-outline-primary" type="button">Előnézet frissítése</button>
-                </div>
-                <div class="card-body">
-                    <iframe id="previewFrame" style="width:100%; border:1px solid #e5e5e5; border-radius:8px;"></iframe>
-                </div>
-            </div>
+            <iframe id="previewFrame" title="Preview"></iframe>
+            <div id="previewErr" class="danger" style="margin-top:8px;"></div>
         </div>
     </div>
 </div>
 
-@section scripts{
+@section scripts {
     <script>
 (function(){
-  let originalThml = '';
-  let originalBlocks = [];
-  let chartBlockIndex = -1;
+    // —— Endpoints ——
+    const renderUrl = '@Url.Action("RenderPreview", "Editor")';
+    const loadUrl   = '@Url.Action("LoadMetric",    "Editor")';
+    const saveUrl   = '@Url.Action("SaveMetric",    "Editor")';
+    const listUrl   = '@Url.Action("ListMetrics",   "Editor")'; // -> JSON: ["metric01.thtml", ...]
 
-  const ddlFiles = document.getElementById('ddlFiles');
-  const btnLoad = document.getElementById('btnLoad');
-  const btnNew = document.getElementById('btnNew');
-  const btnSave = document.getElementById('btnSave');
-  const btnRegenerate = document.getElementById('btnRegenerate');
-  const btnPreview = document.getElementById('btnPreview');
-  const fileNameInput = document.getElementById('txtFileName');
-  const generatedCode = document.getElementById('generatedCode');
-  const token = document.querySelector("input[name='__RequestVerificationToken']")?.value || "";
+    // —— Elements ——
+    const el = {
+        metricSelect: $('#metricSelect')[0], metricName: $('#metricName')[0],
+        series: $('#series')[0], legends: $('#legends')[0], groupby: $('#groupby')[0], title: $('#title')[0],
+        querySql: $('#querySql')[0], rawInput: $('#rawInput')[0], generated: $('#generatedCode')[0],
+        preview: $('#previewFrame')[0], previewErr: $('#previewErr')[0]
+    };
 
-  const metricName = document.getElementById('metricName');
-  const owner = document.getElementById('owner');
-  const description = document.getElementById('description');
-  const sqlQuery = document.getElementById('sqlQuery');
-  const representation = document.getElementById('representation');
-  const series = document.getElementById('series');
-  const legends = document.getElementById('legends');
-  const groupBy = document.getElementById('groupBy');
-  const title = document.getElementById('title');
-  const valueColorPairs = document.getElementById('valueColorPairs');
-  const btnAddColorPair = document.getElementById('btnAddColorPair');
+    // —— Anti-forgery token ——
+    const afTokenEl = document.querySelector('input[name="__RequestVerificationToken"]');
+    const afToken = afTokenEl ? afTokenEl.value : null;
 
-  function escapeQuotes(s){ return (s||'').replace(/\\/g,'\\\\').replace(/"/g,'\\"'); }
-  function addValueColorPair(val, col){
-    const row = document.createElement('div');
-    row.className = 'value-color-pair row g-2 align-items-center';
-    row.innerHTML = `
-      <div class="col-6"><input type="text" class="form-control value-input" placeholder="érték (pl. FR)" value="${val||''}"></div>
-      <div class="col-4"><input type="color" class="form-control form-control-color color-input" value="${col||'#000000'}"></div>
-      <div class="col-2 text-end"><button type="button" class="btn btn-outline-danger btn-sm btn-remove">X</button></div>`;
-    row.querySelector('.btn-remove').addEventListener('click', () => row.remove());
-    valueColorPairs.appendChild(row);
-  }
-  btnAddColorPair.addEventListener('click', () => addValueColorPair('', '#000000'));
-
-  function resetForm(){
-    valueColorPairs.innerHTML = '';
-    metricName.value = description.value = owner.value = '';
-    sqlQuery.value = '';
-    representation.value = 'barchart';
-    series.value = legends.value = groupBy.value = title.value = '';
-  }
-
-  function splitBlocks(th){
-    originalBlocks = []; chartBlockIndex = -1;
-    const re = /\{\{([\s\S]*?)\}\}/g; let m;
-    while ((m = re.exec(th)) !== null){
-      const inner = m[1];
-      const isFilter = /representation\s*=\s*['"]filter['"]/i.test(inner);
-      const isChart  = /representation\s*=\s*['"](barchart|linechart|piechart|table)['"]/i.test(inner);
-      originalBlocks.push({ full: m[0], inner, isFilter, isChart });
-    }
-    chartBlockIndex = originalBlocks.findIndex(b => b.isChart);
-  }
-
-  function parseAndLoad(thtml){
-    originalThml = thtml || '';
-    resetForm(); splitBlocks(originalThml);
-
-    const metaMatch = originalThml.match(/<!--([\s\S]*?)-->/);
-    if (metaMatch){
-      const m = metaMatch[1];
-      const pick = (k)=>{ const rx = new RegExp(k+'\\s*:\\s*([^\\n]+)','i'); const mm = m.match(rx); return mm?mm[1].trim():''; };
-      metricName.value = pick('metricName'); description.value = pick('description'); owner.value = pick('owner');
-    }
-
-    const chartInner = (chartBlockIndex >= 0) ? originalBlocks[chartBlockIndex].inner : '';
-    if (chartInner){
-      const qMatch = chartInner.match(/query\s*=\s*["']([\s\S]*?)["']\s*;?/i);
-      if (qMatch) sqlQuery.value = qMatch[1].replace(/\\n/g,'\n').replace(/\\"/g,'"').replace(/\\\\/g,'\\');
-      const rep = chartInner.match(/representation\s*=\s*["']([^"']+)["']/i); if (rep) representation.value = rep[1];
-      const ser = chartInner.match(/series\s*=\s*["']([^"']+)["']/i); if (ser) series.value = ser[1];
-      const leg = chartInner.match(/legends\s*=\s*["']([^"']+)["']/i); if (leg) legends.value = leg[1];
-      const grp = chartInner.match(/groupby\s*=\s*["']([^"']+)["']/i); if (grp) groupBy.value = grp[1];
-      const titleMatch = chartInner.match(/title\s*:\s*["'](.*?)["']/i); if (titleMatch) title.value = titleMatch[1].replace(/\\"/g,'"');
-      const colorsBlock = chartInner.match(/valueColors\s*:\s*\{([\s\S]*?)\}/i);
-      if (colorsBlock){
-        colorsBlock[1].split(/\r?\n/).map(l=>l.trim()).forEach(l=>{
-          const m = l.match(/["']([^"']+)["']\s*:\s*["']([^"']+)["']/);
-          if (m) addValueColorPair(m[1], m[2]);
+    // —— Helper: form POST antiforgery-vel ——
+    async function postForm(url, fields){
+        const form = new URLSearchParams();
+        if (afToken) form.set('__RequestVerificationToken', afToken);
+        for (const k in fields) if (Object.prototype.hasOwnProperty.call(fields,k)) form.set(k, fields[k]);
+        const resp = await fetch(url, {
+            method: 'POST', credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8' },
+            body: form.toString()
         });
-      }
+        return resp;
     }
-    generateThtml();
-  }
 
-  function buildChartBlock(){
-    const lines = [];
-    document.querySelectorAll('#valueColorPairs .value-color-pair').forEach(p=>{
-      const key = (p.querySelector('.value-input')?.value || '').trim();
-      const col = (p.querySelector('.color-input')?.value || '').trim();
-      if (key && col) lines.push('      "'+key+'": "'+col+'"');
-    });
-    const fmt = [];
-    if (title.value.trim()) fmt.push('    title: "'+escapeQuotes(title.value.trim())+'"');
-    if (lines.length)       fmt.push('    valueColors: {\n'+lines.join(',\n')+'\n    }');
-
-    const rep = (representation.value || '').trim() || 'barchart';
-    const q = (sqlQuery.value || '').replace(/\r/g,'').replace(/\n/g,'\\n');
-
-    return `{{
-  query="
-${escapeQuotes(q)}
-  ";
-  representation="${rep}";
-  series="${(series.value||'').trim()}";
-  legends="${(legends.value||'').trim()}";
-  groupby="${(groupBy.value||'').trim()}";
-  formatting={
-${fmt.length ? fmt.join(',\n') : '    '}
-  }
-}}`;
-  }
-
-  function generateThtml(){
-    const newChart = buildChartBlock();
-    let final;
-    if (originalBlocks.length === 0) {
-      final = newChart;
-    } else if (chartBlockIndex >= 0) {
-      final = originalThml.replace(originalBlocks[chartBlockIndex].full, newChart);
-    } else {
-      final = originalThml.trim(); if (final && !/\n$/.test(final)) final += '\n\n'; final += newChart;
+    // —— Robust parser / serializer ——
+    function getKv(inner, key){
+        const re = new RegExp('(?:^|;)\\s*' + key + '\\s*=\\s*"([\\s\\S]*?)"\\s*;', 's');
+        const m = inner.match(re); return m ? m[1] : null;
     }
-    generatedCode.value = final;
-    return final;
-  }
+    function setKv(inner, key, value){
+        const esc = (s) => String(s ?? '').replaceAll('"', '\\"');
+        const line = key + '="' + esc(value) + '";';
+        const re = new RegExp('((?:^|;)\\s*)' + key + '\\s*=\\s*"([\\s\\S]*?)"\\s*;', 's');
+        if (re.test(inner)) return inner.replace(re, '$1' + line);
+        return (inner ? inner.replace(/\s*$/s, function(m){return '\n  ' + line + m;}) : ('  ' + line + '\n'));
+    }
+    function parseChartBlock(blockText){
+        const inner = blockText.trim().replace(/^\{\{/, '').replace(/\}\}\s*$/, '').trim();
+        return {
+            query: getKv(inner, 'query') ?? '',
+            representation: getKv(inner, 'representation') ?? 'barchart',
+            series: getKv(inner, 'series') ?? '',
+            legends: getKv(inner, 'legends') ?? '',
+            groupby: getKv(inner, 'groupby') ?? '',
+            formatting: getKv(inner, 'formatting') ?? ''
+        };
+    }
+    function buildChartBlock(state){
+        let inner = '';
+        inner = setKv(inner, 'query', state.query ?? '');
+        inner = setKv(inner, 'representation', state.representation ?? 'barchart');
+        inner = setKv(inner, 'series', state.series ?? '');
+        inner = setKv(inner, 'legends', state.legends ?? '');
+        inner = setKv(inner, 'groupby', state.groupby ?? '');
+        if (state.formatting) inner = setKv(inner, 'formatting', state.formatting);
+        inner = inner.split('\n').map(function(l){ return l ? '  ' + l : l; }).join('\n');
+        return '{{\n' + inner + '\n}}';
+    }
 
-  function renderPreview(){
-    const thtml = generateThtml();
-    const url = '@Url.Action("RenderPreview","Editor")';
-    const body = new URLSearchParams();
-    body.set('__RequestVerificationToken', token);
-    body.set('thtmlCode', thtml);
+    // —— {{ ... }} blokkok keresése ——
+    function findBlocks(thml){
+        const re = /\{\{[\s\S]*?\}\}/g; const blocks = []; let m;
+        while ((m = re.exec(thml))){ blocks.push({ start: m.index, end: re.lastIndex, text: m[0] }); }
+        return blocks;
+    }
+    function isFilterBlock(text){ return /representation\s*=\s*"filter"/i.test(text); }
+    function isChartLike(text){ return /query\s*=\s*"/i.test(text) && !isFilterBlock(text); }
 
-    fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' }, body: body.toString() })
-      .then(r => r.text())
-      .then(html => {
-        const frame = document.getElementById('previewFrame');
-        const doc = frame.contentDocument || frame.contentWindow.document;
-
-        // váz HTML – nincs <script> a stringben
-        doc.open();
-        doc.write(`<!doctype html>
-<html><head><meta charset="utf-8">
-<link rel="stylesheet" href="@Url.Content("~/Content/bootstrap.min.css")">
-<link rel="stylesheet" href="@Url.Content("~/Content/datatables.min.css")">
-</head><body class="p-2"></body></html>`);
-        doc.close();
-
-        // Könyvtárak sorrendben
-        const libs = [
-          '@Url.Content("~/Scripts/chart.min.js")',
-          '@Url.Content("~/Scripts/jquery-3.7.1.min.js")',
-          '@Url.Content("~/Scripts/datatables.min.js")'
-        ];
-        libs.reduce((p, src) => p.then(() => new Promise((res, rej) => {
-          const s = doc.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(src); doc.head.appendChild(s);
-        })), Promise.resolve()).then(() => {
-          doc.body.innerHTML = html;
-        }).catch(src => alert('Preview script load error: ' + src));
-      })
-      .catch(err => alert('Preview error: ' + err));
-  }
-
-  // Események
-  btnLoad.addEventListener('click', () => {
-    const name = ddlFiles.value;
-    if (!name){ alert('Válassz egy metrikát!'); return; }
-    fetch('@Url.Action("LoadMetric","Editor")?fileName=' + encodeURIComponent(name))
-      .then(r => r.ok ? r.text() : Promise.reject(r.status + ' ' + r.statusText))
-      .then(txt => { fileNameInput.value = name; parseAndLoad(txt); })
-      .catch(err => alert('Load error: ' + err));
-  });
-
-  btnNew.addEventListener('click', () => { ddlFiles.value=''; fileNameInput.value=''; originalThml=''; originalBlocks=[]; chartBlockIndex=-1; resetForm(); generatedCode.value = buildChartBlock(); });
-  btnRegenerate.addEventListener('click', () => generateThtml());
-  btnPreview.addEventListener('click', () => renderPreview());
-
-  btnSave.addEventListener('click', () => {
-    const thtml = generateThtml();
-    let name = (fileNameInput.value || '').trim();
-    if (!name){ alert('Adj meg fájlnevet (.thtml)!'); return; }
-    if (!/\.thtml$/i.test(name)) name += '.thtml';
-
-    const body = new URLSearchParams();
-    body.set('__RequestVerificationToken', token);
-    body.set('fileName', name);
-    body.set('content', thtml);
-
-    fetch('@Url.Action("SaveMetric","Editor")', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' }, body: body.toString() })
-      .then(r => r.json())
-      .then(data => {
-        if (!data.success) throw new Error(data.message || 'Save failed');
-        alert(data.message || 'Saved');
-        if (![...ddlFiles.options].some(o => o.value === name)){
-          const opt = document.createElement('option'); opt.value = opt.textContent = name; ddlFiles.appendChild(opt);
+    // —— THML összeállítás ——
+    function generateThtml(){
+        const base = el.rawInput.value || '';
+        const chartBlock = buildChartBlock({
+            query: el.querySql.value, representation: 'barchart', series: el.series.value,
+            legends: el.legends.value, groupby: el.groupby.value,
+            formatting: el.title.value ? '{ title: "' + el.title.value.replaceAll('"','\\\"') + '" }' : ''
+        });
+        if (!base){ el.generated.value = chartBlock; return chartBlock; }
+        const blocks = findBlocks(base);
+        if (!blocks.length){ el.generated.value = chartBlock; return chartBlock; }
+        let replaced = false, out = '', last = 0;
+        for (var i=0;i<blocks.length;i++){
+            const b = blocks[i];
+            if (!replaced && isChartLike(b.text)) { out += base.slice(last, b.start) + chartBlock; last = b.end; replaced = true; }
         }
-        ddlFiles.value = name;
-      })
-      .catch(err => alert('Save error: ' + err.message));
-  });
+        if (!replaced) out = base + (base.endsWith('\n') ? '' : '\n') + chartBlock + '\n';
+        else out += base.slice(last);
+        el.generated.value = out; return out;
+    }
 
-  // Induláskor legyen valami a kód panelben
-  generatedCode.value = buildChartBlock();
+    // —— Preview ——
+    async function refreshPreview(){
+        el.previewErr.textContent = '';
+        const thml = el.generated.value || generateThtml();
+        const candidates = ['thtmlCode','thml','content'];
+        let html = null, lastErr = null;
+        for (const key of candidates){
+            try {
+                const resp = await postForm(renderUrl, { [key]: thml });
+                if (resp.ok){ html = await resp.text(); break; }
+                lastErr = 'HTTP ' + resp.status;
+            } catch (e){ lastErr = e && e.message ? e.message : String(e); }
+        }
+        if (html == null){ el.previewErr.textContent = 'Preview hiba: ' + (lastErr || 'ismeretlen hiba'); return; }
+        const ifr = el.preview; const doc = ifr.contentDocument;
+        doc.open(); doc.write(html); doc.close();
+        await ensureLibs(doc); runScripts(doc);
+    }
+    function runScripts(doc){
+        Array.prototype.slice.call(doc.querySelectorAll('script')).forEach(function(s){
+            const n = doc.createElement('script');
+            if (s.getAttribute('src')) n.setAttribute('src', s.getAttribute('src')); else n.text = s.text || s.textContent || '';
+            Array.prototype.slice.call(s.attributes).forEach(function(a){ if (a.name !== 'src') n.setAttribute(a.name, a.value); });
+            s.parentNode.insertBefore(n, s); s.parentNode.removeChild(s);
+        });
+    }
+    function ensureScript(doc, src){
+        return new Promise(function(resolve){
+            if ([].some.call(doc.scripts, function(s){ return s.src && s.src.indexOf(src) !== -1; })) return resolve();
+            const e = doc.createElement('script'); e.async = false; e.src = src; e.onload = function(){ resolve(); };
+            doc.head.appendChild(e);
+        });
+    }
+    async function ensureLibs(doc){
+        await ensureScript(doc, 'https://cdn.jsdelivr.net/npm/chart.js');
+        await ensureScript(doc, 'https://code.jquery.com/jquery-3.7.1.min.js');
+    }
+
+    // —— Metric list / load / save ——
+    async function refreshMetricList(){
+        const sel = el.metricSelect; sel.innerHTML = '<option value="">– betöltés… –</option>';
+        try {
+            const resp = await fetch(listUrl, { credentials: 'same-origin' });
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            const arr = await resp.json();
+            sel.innerHTML = '<option value="">– válassz –</option>';
+            (arr || []).forEach(function(name){ const o = document.createElement('option'); o.value = o.text = name; sel.appendChild(o); });
+        } catch(err){
+            sel.innerHTML = '<option value="">(nincs lista endpoint)</option>';
+        }
+    }
+    async function loadMetric(name){
+        const n = (name || el.metricName.value || el.metricSelect.value || '').trim();
+        if (!n){ alert('Adj meg egy fájlnevet vagy válassz a listából.'); return; }
+        // POST + antiforgery; több kulcsnév próba (controller szignatúra-független)
+        const keyCandidates = ['name','metricName','file','fileName'];
+        let txt = null, lastErr = null;
+        for (const key of keyCandidates){
+            try {
+                const resp = await postForm(loadUrl, { [key]: n });
+                if (resp.ok){ txt = await resp.text(); break; }
+                lastErr = 'HTTP ' + resp.status;
+            } catch(e){ lastErr = e && e.message ? e.message : String(e); }
+        }
+        if (txt == null){ alert('Betöltési hiba: ' + (lastErr || 'ismeretlen')); return; }
+        el.metricName.value = n; el.rawInput.value = txt;
+        const b = (findBlocks(txt).find(function(x){ return isChartLike(x.text); }) || {}).text;
+        if (b){
+            const st = parseChartBlock(b);
+            el.querySql.value = st.query || '';
+            el.series.value = st.series || '';
+            el.legends.value = st.legends || '';
+            el.groupby.value = st.groupby || '';
+            const m = /title\s*:\s*\"([\s\S]*?)\"/.exec(st.formatting || '');
+            el.title.value = m ? m[1] : '';
+            generateThtml();
+        } else {
+            initSmoke();
+        }
+    }
+    async function saveMetric(asNew){
+        let n = (el.metricName.value || '').trim();
+        if (asNew){ const nn = prompt('Új fájlnév:', n || 'metric_new.thtml'); if (!nn) return; n = nn.trim(); el.metricName.value = n; }
+        if (!n){ alert('Adj meg egy fájlnevet.'); return; }
+        const body = el.generated.value || generateThtml();
+        const resp = await postForm(saveUrl, { name: n, content: body });
+        if (!resp.ok){ alert('Mentési hiba: HTTP ' + resp.status); return; }
+        alert('Elmentve: ' + n);
+        try { await refreshMetricList(); } catch(_){ }
+    }
+
+    // —— Smoke test ——
+    function initSmoke(){
+        const smoke = "SELECT 2023 AS OrderYear, 'FR' AS CountryRegionCode, 120000 AS TotalSales";
+        el.querySql.value = smoke;
+        el.series.value = 'TotalSales';
+        el.legends.value = 'OrderYear';
+        el.groupby.value = 'CountryRegionCode';
+        el.title.value = 'Smoke test – static';
+        el.generated.value = buildChartBlock({ query: smoke, representation: 'barchart', series: 'TotalSales', legends: 'OrderYear', groupby: 'CountryRegionCode', formatting: '{ title: "Smoke test – static" }' });
+    }
+
+    // —— Bindings ——
+    $('#btnRefreshList').on('click', refreshMetricList);
+    $('#metricSelect').on('change', function(){ if (this.value) { el.metricName.value = this.value; loadMetric(this.value); } });
+    $('#btnLoad').on('click', function(){ loadMetric(); });
+    $('#btnSave').on('click', function(){ saveMetric(false); });
+    $('#btnSaveAs').on('click', function(){ saveMetric(true); });
+
+    $('#btnBuild').on('click', function(){
+        el.generated.value = buildChartBlock({
+            query: el.querySql.value, representation: 'barchart', series: el.series.value,
+            legends: el.legends.value, groupby: el.groupby.value,
+            formatting: el.title.value ? '{ title: "' + el.title.value.replaceAll('"','\\\"') + '" }' : ''
+        });
+    });
+    $('#btnGenerateThtml').on('click', generateThtml);
+    $('#btnPreview').on('click', refreshPreview);
+
+    // —— Init ——
+    initSmoke();
+    refreshMetricList();
 })();
     </script>
-    <style>
-        /* kód textarea kinövi a helyet */
-        .col-lg-6.d-flex > .card:first-child .card-body {
-            display: flex;
-            flex-direction: column;
-        }
-
-        #generatedCode {
-            flex: 1 1 auto;
-            min-height: 360px;
-            height: 48vh;
-            resize: vertical;
-        }
-
-        #previewFrame {
-            width: 100%;
-            min-height: 300px;
-            height: 38vh;
-        }
-        /* Razor escape szükséges: @@media */
-        @@media (min-height: 900px) {
-            #generatedCode {
-                height: 56vh;
-            }
-
-            #previewFrame {
-                height: 34vh;
-            }
-        }
-    </style>
 }
