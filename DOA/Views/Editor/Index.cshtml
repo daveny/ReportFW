@@ -143,7 +143,6 @@
 @section scripts{
     <script>
 (function(){
-  // --- állapot + UI refek
   let originalThml = '';
   let originalBlocks = [];
   let chartBlockIndex = -1;
@@ -170,11 +169,27 @@
   const valueColorPairs = document.getElementById('valueColorPairs');
   const btnAddColorPair = document.getElementById('btnAddColorPair');
 
-  // --- util
   function escapeQuotes(s){ return (s||'').replace(/\\/g,'\\\\').replace(/"/g,'\\"'); }
-  function log(){ try { console.log.apply(console, arguments); } catch(_){} }
+  function addValueColorPair(val, col){
+    const row = document.createElement('div');
+    row.className = 'value-color-pair row g-2 align-items-center';
+    row.innerHTML = `
+      <div class="col-6"><input type="text" class="form-control value-input" placeholder="érték (pl. FR)" value="${val||''}"></div>
+      <div class="col-4"><input type="color" class="form-control form-control-color color-input" value="${col||'#000000'}"></div>
+      <div class="col-2 text-end"><button type="button" class="btn btn-outline-danger btn-sm btn-remove">X</button></div>`;
+    row.querySelector('.btn-remove').addEventListener('click', () => row.remove());
+    valueColorPairs.appendChild(row);
+  }
+  btnAddColorPair.addEventListener('click', () => addValueColorPair('', '#000000'));
 
-  // --- blokk bontás (engedékenyebb)
+  function resetForm(){
+    valueColorPairs.innerHTML = '';
+    metricName.value = description.value = owner.value = '';
+    sqlQuery.value = '';
+    representation.value = 'barchart';
+    series.value = legends.value = groupBy.value = title.value = '';
+  }
+
   function splitBlocks(th){
     originalBlocks = []; chartBlockIndex = -1;
     const re = /\{\{([\s\S]*?)\}\}/g; let m;
@@ -185,110 +200,39 @@
       originalBlocks.push({ full: m[0], inner, isFilter, isChart });
     }
     chartBlockIndex = originalBlocks.findIndex(b => b.isChart);
-    log('[Editor] splitBlocks:', { count: originalBlocks.length, chartBlockIndex });
   }
 
-  // --- UI helpers
-  btnAddColorPair.addEventListener('click', () => addValueColorPair('', '#000000'));
-  function addValueColorPair(val, col){
-    const row = document.createElement('div');
-    row.className = 'value-color-pair row g-2 align-items-center';
-    row.innerHTML = `
-      <div class="col-6">
-        <input type="text" class="form-control value-input" placeholder="érték (pl. FR)" value="${val||''}">
-      </div>
-      <div class="col-4">
-        <input type="color" class="form-control form-control-color color-input" value="${col||'#000000'}">
-      </div>
-      <div class="col-2 text-end">
-        <button type="button" class="btn btn-outline-danger btn-sm btn-remove">X</button>
-      </div>`;
-    row.querySelector('.btn-remove').addEventListener('click', () => row.remove());
-    valueColorPairs.appendChild(row);
-  }
-
-  function resetForm(){
-    valueColorPairs.innerHTML = '';
-    metricName.value = description.value = owner.value = '';
-    sqlQuery.value = ''; representation.value = 'barchart';
-    series.value = legends.value = groupBy.value = title.value = '';
-  }
-
-  // --- betöltés (hangos hibakezeléssel)
-  btnLoad.addEventListener('click', () => {
-    const name = ddlFiles.value;
-    if (!name){ alert('Válassz egy metrikát!'); return; }
-    const url = '@Url.Action("LoadMetric","Editor")?fileName=' + encodeURIComponent(name);
-    log('[Editor] Loading metric:', url);
-
-    fetch(url).then(async r => {
-      if (!r.ok){
-        const txt = await r.text().catch(()=>'');
-        throw new Error(`LoadMetric ${r.status} ${r.statusText} ${txt}`);
-      }
-      return r.text();
-    }).then(txt => {
-      log('[Editor] Loaded length:', txt.length);
-      fileNameInput.value = name;
-      parseAndLoad(txt);
-    }).catch(err => {
-      console.error(err);
-      alert('Load error: ' + err.message);
-    });
-  });
-
-  // --- parser (engedékenyebb regexek, ; opcionális, ' vagy " is ok)
   function parseAndLoad(thtml){
-    try{
-      originalThml = thtml || '';
-      resetForm();
-      splitBlocks(originalThml);
+    originalThml = thtml || '';
+    resetForm(); splitBlocks(originalThml);
 
-      // meta kommentek (opcionális)
-      const metaMatch = originalThml.match(/<!--([\s\S]*?)-->/);
-      if (metaMatch){
-        const m = metaMatch[1];
-        const pick = (k)=>{ const rx = new RegExp(k+'\\s*:\\s*([^\\n]+)','i'); const mm = m.match(rx); return mm?mm[1].trim():''; };
-        metricName.value = pick('metricName');
-        description.value = pick('description');
-        owner.value = pick('owner');
-      }
-
-      const chartInner = (chartBlockIndex >= 0) ? originalBlocks[chartBlockIndex].inner : '';
-
-      if (chartInner){
-        // query="...";  -> ; opcionális, ' vagy " is ok
-        const qMatch = chartInner.match(/query\s*=\s*["']([\s\S]*?)["']\s*;?/i);
-        if (qMatch) sqlQuery.value = qMatch[1].replace(/\\n/g,'\n').replace(/\\"/g,'"').replace(/\\\\/g,'\\');
-
-        const rep = chartInner.match(/representation\s*=\s*["']([^"']+)["']/i); if (rep) representation.value = rep[1];
-        const ser = chartInner.match(/series\s*=\s*["']([^"']+)["']/i); if (ser) series.value = ser[1];
-        const leg = chartInner.match(/legends\s*=\s*["']([^"']+)["']/i); if (leg) legends.value = leg[1];
-        const grp = chartInner.match(/groupby\s*=\s*["']([^"']+)["']/i); if (grp) groupBy.value = grp[1];
-
-        const titleMatch = chartInner.match(/title\s*:\s*["'](.*?)["']/i);
-        if (titleMatch) title.value = titleMatch[1].replace(/\\"/g,'"');
-
-        const colorsBlock = chartInner.match(/valueColors\s*:\s*\{([\s\S]*?)\}/i);
-        if (colorsBlock){
-          colorsBlock[1].split(/\r?\n/).map(l=>l.trim()).forEach(l=>{
-            const m = l.match(/["']([^"']+)["']\s*:\s*["']([^"']+)["']/);
-            if (m) addValueColorPair(m[1], m[2]);
-          });
-        }
-      } else {
-        log('[Editor] No chart block found – starting from blank form.');
-      }
-
-      generateThtml(); // mindig töltsük ki a jobb oldalt
-    } catch(e){
-      console.error('[Editor] parseAndLoad error', e);
-      alert('Parse error: ' + e.message);
-      generatedCode.value = originalThml || '';
+    const metaMatch = originalThml.match(/<!--([\s\S]*?)-->/);
+    if (metaMatch){
+      const m = metaMatch[1];
+      const pick = (k)=>{ const rx = new RegExp(k+'\\s*:\\s*([^\\n]+)','i'); const mm = m.match(rx); return mm?mm[1].trim():''; };
+      metricName.value = pick('metricName'); description.value = pick('description'); owner.value = pick('owner');
     }
+
+    const chartInner = (chartBlockIndex >= 0) ? originalBlocks[chartBlockIndex].inner : '';
+    if (chartInner){
+      const qMatch = chartInner.match(/query\s*=\s*["']([\s\S]*?)["']\s*;?/i);
+      if (qMatch) sqlQuery.value = qMatch[1].replace(/\\n/g,'\n').replace(/\\"/g,'"').replace(/\\\\/g,'\\');
+      const rep = chartInner.match(/representation\s*=\s*["']([^"']+)["']/i); if (rep) representation.value = rep[1];
+      const ser = chartInner.match(/series\s*=\s*["']([^"']+)["']/i); if (ser) series.value = ser[1];
+      const leg = chartInner.match(/legends\s*=\s*["']([^"']+)["']/i); if (leg) legends.value = leg[1];
+      const grp = chartInner.match(/groupby\s*=\s*["']([^"']+)["']/i); if (grp) groupBy.value = grp[1];
+      const titleMatch = chartInner.match(/title\s*:\s*["'](.*?)["']/i); if (titleMatch) title.value = titleMatch[1].replace(/\\"/g,'"');
+      const colorsBlock = chartInner.match(/valueColors\s*:\s*\{([\s\S]*?)\}/i);
+      if (colorsBlock){
+        colorsBlock[1].split(/\r?\n/).map(l=>l.trim()).forEach(l=>{
+          const m = l.match(/["']([^"']+)["']\s*:\s*["']([^"']+)["']/);
+          if (m) addValueColorPair(m[1], m[2]);
+        });
+      }
+    }
+    generateThtml();
   }
 
-  // --- chart blokk generálás (mindig visszaad valamit)
   function buildChartBlock(){
     const lines = [];
     document.querySelectorAll('#valueColorPairs .value-color-pair').forEach(p=>{
@@ -296,7 +240,6 @@
       const col = (p.querySelector('.color-input')?.value || '').trim();
       if (key && col) lines.push('      "'+key+'": "'+col+'"');
     });
-
     const fmt = [];
     if (title.value.trim()) fmt.push('    title: "'+escapeQuotes(title.value.trim())+'"');
     if (lines.length)       fmt.push('    valueColors: {\n'+lines.join(',\n')+'\n    }');
@@ -319,123 +262,126 @@ ${fmt.length ? fmt.join(',\n') : '    '}
   }
 
   function generateThtml(){
+    const newChart = buildChartBlock();
     let final;
-    try{
-      const newChart = buildChartBlock();
-      if (originalBlocks.length === 0){
-        final = newChart;
-      } else if (chartBlockIndex >= 0){
-        final = originalThml.replace(originalBlocks[chartBlockIndex].full, newChart);
-      } else {
-        final = originalThml.trim(); if (final && !/\n$/.test(final)) final += '\n\n'; final += newChart;
-      }
-    } catch(e){
-      console.error('[Editor] generateThtml error', e);
-      final = ''; // de a végén feltöltjük legalább az üreset
+    if (originalBlocks.length === 0) {
+      final = newChart;
+    } else if (chartBlockIndex >= 0) {
+      final = originalThml.replace(originalBlocks[chartBlockIndex].full, newChart);
+    } else {
+      final = originalThml.trim(); if (final && !/\n$/.test(final)) final += '\n\n'; final += newChart;
     }
-    if (!final) final = buildChartBlock(); // sose maradjon üres
     generatedCode.value = final;
     return final;
   }
 
-    function renderPreview(){
+  function renderPreview(){
     const thtml = generateThtml();
-    const url = '@Url.Action("RenderPreview", "Editor")';
-
+    const url = '@Url.Action("RenderPreview","Editor")';
     const body = new URLSearchParams();
     body.set('__RequestVerificationToken', token);
     body.set('thtmlCode', thtml);
 
-    fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-    body: body.toString()
-    })
-    .then(r => r.text())
-    .then(html => {
-    const frame = document.getElementById('previewFrame');
-    const doc = frame.contentDocument || frame.contentWindow.document;
+    fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' }, body: body.toString() })
+      .then(r => r.text())
+      .then(html => {
+        const frame = document.getElementById('previewFrame');
+        const doc = frame.contentDocument || frame.contentWindow.document;
 
-    doc.open();
-doc.write(`<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <link rel="stylesheet" href="@Url.Content("~/Content/bootstrap.min.css")">
-  <link rel="stylesheet" href="@Url.Content("~/Content/datatables.min.css")">
-</head>
-<body class="p-2"></body>
-</html>`);
-doc.close();   // kisbetű!
+        // váz HTML – nincs <script> a stringben
+        doc.open();
+        doc.write(`<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="@Url.Content("~/Content/bootstrap.min.css")">
+<link rel="stylesheet" href="@Url.Content("~/Content/datatables.min.css")">
+</head><body class="p-2"></body></html>`);
+        doc.close();
 
-      const libs = [
-        '@Url.Content("~/Scripts/chart.min.js")',
-        '@Url.Content("~/Scripts/jquery-3.7.1.min.js")',
-        '@Url.Content("~/Scripts/datatables.min.js")'
+        // Könyvtárak sorrendben
+        const libs = [
+          '@Url.Content("~/Scripts/chart.min.js")',
+          '@Url.Content("~/Scripts/jquery-3.7.1.min.js")',
+          '@Url.Content("~/Scripts/datatables.min.js")'
         ];
-        loadScriptsSequentially(doc, libs)
-        .then(() => { doc.body.innerHTML = html; })
-        .catch(src => alert('Preview script load error: ' + src));
-        })
-        .catch(err => { console.error(err); alert('Preview error: ' + err); });
-        }
-        function loadScript(doc, src){
-        return new Promise((resolve, reject) => {
-        const s = doc.createElement('script');
-        s.src = src;
-        s.onload = resolve; s.onerror = () => reject(src);
-        doc.head.appendChild(s);
-        });
-        }
-        function loadScriptsSequentially(doc, arr){
-        return arr.reduce((p, src) => p.then(() => loadScript(doc, src)), Promise.resolve());
-        }
+        libs.reduce((p, src) => p.then(() => new Promise((res, rej) => {
+          const s = doc.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(src); doc.head.appendChild(s);
+        })), Promise.resolve()).then(() => {
+          doc.body.innerHTML = html;
+        }).catch(src => alert('Preview script load error: ' + src));
+      })
+      .catch(err => alert('Preview error: ' + err));
+  }
 
-        // --- események
-        btnNew.addEventListener('click', () => { ddlFiles.value = ''; fileNameInput.value = ''; originalThml=''; originalBlocks=[]; chartBlockIndex=-1; resetForm(); generateThtml(); });
-        btnRegenerate.addEventListener('click', () => generateThtml());
-        btnPreview.addEventListener('click', () => renderPreview());
-        btnSave.addEventListener('click', () => {
-        const thtml = generateThtml();
-        let name = (fileNameInput.value || '').trim();
-        if (!name){ alert('Adj meg fájlnevet (.thtml)!'); return; }
-        if (!/\.thtml$/i.test(name)) name += '.thtml';
+  // Események
+  btnLoad.addEventListener('click', () => {
+    const name = ddlFiles.value;
+    if (!name){ alert('Válassz egy metrikát!'); return; }
+    fetch('@Url.Action("LoadMetric","Editor")?fileName=' + encodeURIComponent(name))
+      .then(r => r.ok ? r.text() : Promise.reject(r.status + ' ' + r.statusText))
+      .then(txt => { fileNameInput.value = name; parseAndLoad(txt); })
+      .catch(err => alert('Load error: ' + err));
+  });
 
-        const body = new URLSearchParams();
-        body.set('__RequestVerificationToken', token);
-        body.set('fileName', name);
-        body.set('content', thtml);
+  btnNew.addEventListener('click', () => { ddlFiles.value=''; fileNameInput.value=''; originalThml=''; originalBlocks=[]; chartBlockIndex=-1; resetForm(); generatedCode.value = buildChartBlock(); });
+  btnRegenerate.addEventListener('click', () => generateThtml());
+  btnPreview.addEventListener('click', () => renderPreview());
 
-        fetch('@Url.Action("SaveMetric", "Editor")', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-        body: body.toString()
-        })
-        .then(r => r.json())
-        .then(data => {
+  btnSave.addEventListener('click', () => {
+    const thtml = generateThtml();
+    let name = (fileNameInput.value || '').trim();
+    if (!name){ alert('Adj meg fájlnevet (.thtml)!'); return; }
+    if (!/\.thtml$/i.test(name)) name += '.thtml';
+
+    const body = new URLSearchParams();
+    body.set('__RequestVerificationToken', token);
+    body.set('fileName', name);
+    body.set('content', thtml);
+
+    fetch('@Url.Action("SaveMetric","Editor")', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' }, body: body.toString() })
+      .then(r => r.json())
+      .then(data => {
         if (!data.success) throw new Error(data.message || 'Save failed');
         alert(data.message || 'Saved');
         if (![...ddlFiles.options].some(o => o.value === name)){
-        const opt = document.createElement('option'); opt.value = opt.textContent = name; ddlFiles.appendChild(opt);
+          const opt = document.createElement('option'); opt.value = opt.textContent = name; ddlFiles.appendChild(opt);
         }
         ddlFiles.value = name;
-        })
-        .catch(err => alert('Save error: ' + err.message));
-        });
+      })
+      .catch(err => alert('Save error: ' + err.message));
+  });
 
-        // init – töltsön ki valamit a kód panelbe, hogy látszódjon, él a JS
-        generatedCode.value = buildChartBlock();
-        console.log('[Editor] init OK');
+  // Induláskor legyen valami a kód panelben
+  generatedCode.value = buildChartBlock();
 })();
     </script>
-<style>
-/* a kód textarea töltse ki a helyet */
-.col-lg-6.d-flex > .card:first-child .card-body { display:flex; flex-direction:column; }
-#generatedCode { flex:1 1 auto; min-height:360px; height:48vh; resize:vertical; }
-#previewFrame { width:100%; min-height:300px; height:38vh; }
-@@media (min-height: 900px) {
-  #generatedCode { height:56vh; }
-  #previewFrame  { height:34vh; }
-}
-</style>
+    <style>
+        /* kód textarea kinövi a helyet */
+        .col-lg-6.d-flex > .card:first-child .card-body {
+            display: flex;
+            flex-direction: column;
+        }
+
+        #generatedCode {
+            flex: 1 1 auto;
+            min-height: 360px;
+            height: 48vh;
+            resize: vertical;
+        }
+
+        #previewFrame {
+            width: 100%;
+            min-height: 300px;
+            height: 38vh;
+        }
+        /* Razor escape szükséges: @@media */
+        @@media (min-height: 900px) {
+            #generatedCode {
+                height: 56vh;
+            }
+
+            #previewFrame {
+                height: 34vh;
+            }
+        }
+    </style>
 }

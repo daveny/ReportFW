@@ -14,15 +14,15 @@ namespace Core.Controllers
         private readonly ITemplateProcessor _templateProcessor;
         private readonly IDataService _dataService;
 
-        // ✅ Paraméter nélküli ctor MVC-hez (nincs DI szükség)
+        // Paraméter nélküli ctor (MVC tudja példányosítani DI nélkül is)
         public EditorController()
         {
             var cs = ConfigurationManager.ConnectionStrings["DefaultConnection"]?.ConnectionString ?? "";
-            _dataService = new SqlDataService(cs);          // ugyanaz a minta, mint a MetricController-ben
+            _dataService = new SqlDataService(cs);
             _templateProcessor = new TemplateProcessor();
         }
 
-        // Opcionális DI-csatlakozási pont – ha később bekötnénk konténert
+        // Opcionális DI-ctor
         public EditorController(ITemplateProcessor templateProcessor, IDataService dataService)
         {
             _templateProcessor = templateProcessor ?? new TemplateProcessor();
@@ -50,7 +50,7 @@ namespace Core.Controllers
                 if (string.IsNullOrWhiteSpace(fileName))
                     return new HttpStatusCodeResult(400, "Missing fileName");
 
-                var safe = Path.GetFileName(fileName); // path traversal védelem
+                var safe = Path.GetFileName(fileName);
                 var path = Path.Combine(MetricsRoot, safe);
 
                 if (!System.IO.File.Exists(path))
@@ -68,7 +68,7 @@ namespace Core.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [ValidateInput(false)] // thtml-ben lehet HTML-szerű tartalom
+        [ValidateInput(false)] // a .thtml tartalomban lehet HTML-szerű szöveg
         public JsonResult SaveMetric(string fileName, string content)
         {
             try
@@ -103,23 +103,18 @@ namespace Core.Controllers
             {
                 DebugHelper.Log("--- RenderPreview START ---");
 
-                // ⚙️ Paraméterek összegyűjtése (Form + QueryString) string->string dictionary-be
+                // Paraméterek összegyűjtése string->string dictionary-be
                 var exclude = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
                 { "__RequestVerificationToken", "thtmlCode" };
 
                 var parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-                var qsKeys = Request.QueryString.AllKeys.Where(k => k != null);
-                foreach (var k in qsKeys)
+                foreach (var k in Request.QueryString.AllKeys.Where(k => k != null))
                     if (!exclude.Contains(k)) parameters[k] = Request.QueryString[k];
 
-                var formKeys = Request.Form.AllKeys.Where(k => k != null);
-                foreach (var k in formKeys)
+                foreach (var k in Request.Form.AllKeys.Where(k => k != null))
                     if (!exclude.Contains(k)) parameters[k] = Request.Form[k];
 
-                DebugHelper.Log($"Processing template for preview with {parameters.Count} parameters.");
-
-                // ✅ A ProcessTemplate itt Dictionary<string,string>-et vár
                 var html = _templateProcessor.ProcessTemplate(thtmlCode ?? string.Empty, _dataService, parameters);
 
                 DebugHelper.Log("--- RenderPreview END (Success) ---");
