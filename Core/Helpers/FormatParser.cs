@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 namespace Core.Helpers
 {
@@ -14,14 +15,12 @@ namespace Core.Helpers
 
             try
             {
-                // Remove any curly braces and parse as JSON if possible
                 formattingString = formattingString.Trim();
                 if (formattingString.StartsWith("{") && formattingString.EndsWith("}"))
                 {
                     formattingString = formattingString.Substring(1, formattingString.Length - 2);
                 }
 
-                // Parse row pattern settings
                 if (formattingString.Contains("row:"))
                 {
                     int rowStart = formattingString.IndexOf("row:") + 4;
@@ -29,13 +28,9 @@ namespace Core.Helpers
                     if (rowEnd > rowStart)
                     {
                         string rowOptions = formattingString.Substring(rowStart, rowEnd - rowStart).Trim();
-
-                        // Extract index
                         int indexStart = rowOptions.IndexOf("index:") + 6;
                         int indexEnd = rowOptions.IndexOf(",", indexStart);
                         if (indexEnd == -1) indexEnd = rowOptions.Length;
-
-                        // Extract style
                         int styleStart = rowOptions.IndexOf("style:") + 6;
                         int styleEnd = rowOptions.IndexOf(",", styleStart);
                         if (styleEnd == -1) styleEnd = rowOptions.Length;
@@ -45,11 +40,8 @@ namespace Core.Helpers
                         {
                             string indexStr = rowOptions.Substring(indexStart, indexEnd - indexStart).Trim();
                             string styleStr = rowOptions.Substring(styleStart, styleEnd - styleStart).Trim();
-
-                            // Clean up strings (remove quotes)
                             if (styleStr.StartsWith("\"") && styleStr.EndsWith("\""))
                                 styleStr = styleStr.Substring(1, styleStr.Length - 2);
-
                             options.RowPattern = new RowPatternOptions
                             {
                                 Index = int.Parse(indexStr),
@@ -59,7 +51,6 @@ namespace Core.Helpers
                     }
                 }
 
-                // Parse column pattern settings
                 if (formattingString.Contains("column:"))
                 {
                     int colStart = formattingString.IndexOf("column:") + 7;
@@ -67,13 +58,9 @@ namespace Core.Helpers
                     if (colEnd > colStart)
                     {
                         string colOptions = formattingString.Substring(colStart, colEnd - colStart).Trim();
-
-                        // Extract nameContains
                         int nameStart = colOptions.IndexOf("nameContains:") + 13;
                         int nameEnd = colOptions.IndexOf(",", nameStart);
                         if (nameEnd == -1) nameEnd = colOptions.Length;
-
-                        // Extract style
                         int styleStart = colOptions.IndexOf("style:") + 6;
                         int styleEnd = colOptions.IndexOf(",", styleStart);
                         if (styleEnd == -1) styleEnd = colOptions.Length;
@@ -83,13 +70,10 @@ namespace Core.Helpers
                         {
                             string nameStr = colOptions.Substring(nameStart, nameEnd - nameStart).Trim();
                             string styleStr = colOptions.Substring(styleStart, styleEnd - styleStart).Trim();
-
-                            // Clean up strings (remove quotes)
                             if (nameStr.StartsWith("\"") && nameStr.EndsWith("\""))
                                 nameStr = nameStr.Substring(1, nameStr.Length - 2);
                             if (styleStr.StartsWith("\"") && styleStr.EndsWith("\""))
                                 styleStr = styleStr.Substring(1, styleStr.Length - 2);
-
                             options.ColumnPattern = new ColumnPatternOptions
                             {
                                 NameContains = nameStr,
@@ -101,11 +85,26 @@ namespace Core.Helpers
             }
             catch (Exception ex)
             {
-                // Log the error but don't throw it - we'll return default options
                 System.Diagnostics.Debug.WriteLine($"Error parsing formatting options: {ex.Message}");
             }
 
             return options;
+        }
+
+        private static Dictionary<string, string> ParseValueColors(string formattingStr)
+        {
+            var valueColors = new Dictionary<string, string>();
+            var match = Regex.Match(formattingStr, @"valueColors\s*:\s*\{([^}]+)\}");
+            if (match.Success)
+            {
+                string pairsStr = match.Groups[1].Value;
+                var pairMatches = Regex.Matches(pairsStr, @"['""]([^'""]+)['""]\s*:\s*['""]([^'""]+)['""]");
+                foreach (Match pairMatch in pairMatches)
+                {
+                    valueColors[pairMatch.Groups[1].Value] = pairMatch.Groups[2].Value;
+                }
+            }
+            return valueColors;
         }
 
         public static BarChartOptions ParseBarChartOptions(Dictionary<string, string> instructions)
@@ -120,7 +119,6 @@ namespace Core.Helpers
                 BorderColors = GetDefaultBorderColors()
             };
 
-            // Set sort options
             if (instructions.ContainsKey("sortBy"))
             {
                 options.SortBy = instructions["sortBy"];
@@ -131,11 +129,9 @@ namespace Core.Helpers
                 options.SortDirection = instructions["sortDirection"].ToLower();
             }
 
-            // Extract formatting options if available
             if (instructions.ContainsKey("formatting"))
             {
                 string formattingStr = instructions["formatting"];
-
                 if (formattingStr.Contains("title:"))
                 {
                     int start = formattingStr.IndexOf("title:") + 6;
@@ -157,7 +153,7 @@ namespace Core.Helpers
                     if (end > start)
                     {
                         string borderWidthStr = formattingStr.Substring(start, end - start).Trim();
-                        int borderWidth; // JAVÍTVA
+                        int borderWidth;
                         int.TryParse(borderWidthStr, out borderWidth);
                         options.BorderWidth = borderWidth;
                     }
@@ -171,7 +167,7 @@ namespace Core.Helpers
                     if (end > start)
                     {
                         string horizontalStr = formattingStr.Substring(start, end - start).Trim();
-                        bool horizontal; // JAVÍTVA
+                        bool horizontal;
                         bool.TryParse(horizontalStr, out horizontal);
                         options.Horizontal = horizontal;
                     }
@@ -185,13 +181,12 @@ namespace Core.Helpers
                     if (end > start)
                     {
                         string stackedStr = formattingStr.Substring(start, end - start).Trim();
-                        bool stacked; // JAVÍTVA
+                        bool stacked;
                         bool.TryParse(stackedStr, out stacked);
                         options.Stacked = stacked;
                     }
                 }
-
-                // Parse format options for rows and columns
+                options.ValueColors = ParseValueColors(formattingStr);
                 options.FormatOptions = ParseFormattingOptions(formattingStr);
             }
 
@@ -208,7 +203,6 @@ namespace Core.Helpers
                 Colors = GetDefaultColors()
             };
 
-            // Set sort options
             if (instructions.ContainsKey("sortBy"))
             {
                 options.SortBy = instructions["sortBy"];
@@ -219,11 +213,9 @@ namespace Core.Helpers
                 options.SortDirection = instructions["sortDirection"].ToLower();
             }
 
-            // Extract formatting options if available
             if (instructions.ContainsKey("formatting"))
             {
                 string formattingStr = instructions["formatting"];
-
                 if (formattingStr.Contains("title:"))
                 {
                     int start = formattingStr.IndexOf("title:") + 6;
@@ -245,7 +237,7 @@ namespace Core.Helpers
                     if (end > start)
                     {
                         string showPointsStr = formattingStr.Substring(start, end - start).Trim();
-                        bool showPoints; // JAVÍTVA
+                        bool showPoints;
                         bool.TryParse(showPointsStr, out showPoints);
                         options.ShowPoints = showPoints;
                     }
@@ -259,13 +251,12 @@ namespace Core.Helpers
                     if (end > start)
                     {
                         string tensionStr = formattingStr.Substring(start, end - start).Trim();
-                        int tension; // JAVÍTVA
+                        int tension;
                         int.TryParse(tensionStr, out tension);
                         options.Tension = tension;
                     }
                 }
-
-                // Parse format options for rows and columns
+                options.ValueColors = ParseValueColors(formattingStr);
                 options.FormatOptions = ParseFormattingOptions(formattingStr);
             }
 
@@ -284,10 +275,9 @@ namespace Core.Helpers
                 ValuePosition = "legend",
                 BackgroundColors = GetDefaultBackgroundColors(),
                 BorderColors = GetDefaultBorderColors(),
-                SortDirection = "desc" // Default to descending for pie charts (largest first)
+                SortDirection = "desc"
             };
 
-            // Set sort options
             if (instructions.ContainsKey("sortBy"))
             {
                 options.SortBy = instructions["sortBy"];
@@ -298,11 +288,9 @@ namespace Core.Helpers
                 options.SortDirection = instructions["sortDirection"].ToLower();
             }
 
-            // Extract formatting options if available
             if (instructions.ContainsKey("formatting"))
             {
                 string formattingStr = instructions["formatting"];
-
                 if (formattingStr.Contains("title:"))
                 {
                     int start = formattingStr.IndexOf("title:") + 6;
@@ -324,7 +312,7 @@ namespace Core.Helpers
                     if (end > start)
                     {
                         string showLegendStr = formattingStr.Substring(start, end - start).Trim();
-                        bool showLegend; // JAVÍTVA
+                        bool showLegend;
                         bool.TryParse(showLegendStr, out showLegend);
                         options.ShowLegend = showLegend;
                     }
@@ -338,13 +326,12 @@ namespace Core.Helpers
                     if (end > start)
                     {
                         string doughnutStr = formattingStr.Substring(start, end - start).Trim();
-                        bool isDoughnut; // JAVÍTVA
+                        bool isDoughnut;
                         bool.TryParse(doughnutStr, out isDoughnut);
                         options.IsDoughnut = isDoughnut;
                     }
                 }
 
-                // Parse value display options
                 if (formattingStr.Contains("showValues:"))
                 {
                     int start = formattingStr.IndexOf("showValues:") + 11;
@@ -353,7 +340,7 @@ namespace Core.Helpers
                     if (end > start)
                     {
                         string showValuesStr = formattingStr.Substring(start, end - start).Trim();
-                        bool showValues; // JAVÍTVA
+                        bool showValues;
                         bool.TryParse(showValuesStr, out showValues);
                         options.ShowValues = showValues;
                     }
@@ -367,7 +354,7 @@ namespace Core.Helpers
                     if (end > start)
                     {
                         string showPercentagesStr = formattingStr.Substring(start, end - start).Trim();
-                        bool showPercentages; // JAVÍTVA
+                        bool showPercentages;
                         bool.TryParse(showPercentagesStr, out showPercentages);
                         options.ShowPercentages = showPercentages;
                     }
@@ -383,22 +370,19 @@ namespace Core.Helpers
                         string valuePositionStr = formattingStr.Substring(start, end - start).Trim();
                         if (valuePositionStr.StartsWith("\"") && valuePositionStr.EndsWith("\""))
                             valuePositionStr = valuePositionStr.Substring(1, valuePositionStr.Length - 2);
-
                         if (valuePositionStr == "inside" || valuePositionStr == "outside" || valuePositionStr == "legend")
                         {
                             options.ValuePosition = valuePositionStr;
                         }
                     }
                 }
-
-                // Parse format options for rows and columns
+                options.ValueColors = ParseValueColors(formattingStr);
                 options.FormatOptions = ParseFormattingOptions(formattingStr);
             }
 
             return options;
         }
 
-        // Helper method to find matching closing brace
         private static int FindMatchingClosingBrace(string text, int openBraceIndex)
         {
             int braceCount = 1;
@@ -420,7 +404,6 @@ namespace Core.Helpers
             return -1;
         }
 
-        // Default colors for charts
         private static string[] GetDefaultBackgroundColors()
         {
             return new string[]

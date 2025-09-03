@@ -17,26 +17,32 @@ namespace Core.Controllers
         private readonly string _connectionString;
         private readonly ITemplateProcessor _templateProcessor;
         private readonly IDataService _dataService;
+        private readonly IChartRenderer _chartRenderer; // Renderer a szűrőkhöz
 
         public MetricController()
         {
             _connectionString = System.Configuration.ConfigurationManager.ConnectionStrings["DefaultConnection"].ConnectionString;
             _dataService = new SqlDataService(_connectionString);
             _templateProcessor = new TemplateProcessor();
+            _chartRenderer = new ChartRenderer(); // Példányosítás
         }
 
-        // --- Metric Library Page ---
         public ActionResult Library()
         {
             var metrics = GetMetricsWithMetadata();
             return View(metrics);
         }
 
-        // --- My Metrics Page ---
+        // --- JAVÍTVA: A MyMetrics metódus logikája ---
         public ActionResult MyMetrics()
         {
             var favoriteMetrics = GetMetricsWithMetadata().Where(m => m.IsFavorite).ToList();
-            var renderedMetrics = new Dictionary<MetricTile, MvcHtmlString>();
+            var filterValues = GetFilterValuesFromRequest();
+
+            // 1. Összegyűjtjük az összes egyedi szűrőt a kedvenc metrikákból
+            var uniqueFilters = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
+            var instructionParser = new InstructionParser();
+            var tokenRegex = new Regex(@"\{\{((?:[^{}]|(?<Open>\{)|(?<-Open>\}))+(?(Open)(?!)))\}\}");
 
             foreach (var metric in favoriteMetrics)
             {
@@ -44,11 +50,51 @@ namespace Core.Controllers
                 if (System.IO.File.Exists(templatePath))
                 {
                     string templateContent = System.IO.File.ReadAllText(templatePath);
-                    // A szűrőket a jövőben a dashboardról kapja majd, egyelőre null-t adunk át
-                    string renderedHtml = _templateProcessor.ProcessTemplate(templateContent, _dataService, null);
-                    renderedMetrics.Add(metric, new MvcHtmlString(renderedHtml));
+                    foreach (Match match in tokenRegex.Matches(templateContent))
+                    {
+                        var instructions = instructionParser.ParseInstructions(match.Groups[1].Value);
+                        if (instructions.TryGetValue("representation", out var rep) && rep.Equals("filter", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (instructions.TryGetValue("param", out var paramName) && !uniqueFilters.ContainsKey(paramName))
+                            {
+                                uniqueFilters[paramName] = instructions;
+                            }
+                        }
+                    }
                 }
             }
+
+            // 2. Legeneráljuk a közös szűrőpanel HTML kódját
+            string filterPanelHtml = "";
+            if (uniqueFilters.Any())
+            {
+                var filterControls = new List<string>();
+                foreach (var instructions in uniqueFilters.Values)
+                {
+                    // Beállítjuk a szűrő aktuális értékét a requestből
+                    if (instructions.TryGetValue("param", out var paramName) && filterValues.ContainsKey(paramName))
+                    {
+                        instructions["value"] = filterValues[paramName];
+                    }
+                    filterControls.Add($"<div class='col-md-3'>{_chartRenderer.RenderFilterComponent(instructions)}</div>");
+                }
+                filterPanelHtml = $@"<div class='card mb-4 filter-panel'><div class='card-header d-flex justify-content-between align-items-center bg-light'><h3 class='mb-0'>Global Filters</h3><button type='submit' form='myMetricsForm' class='btn btn-primary'>Apply</button></div><div class='card-body'><div class='row'>{string.Join("", filterControls)}</div></div></div>";
+            }
+            ViewBag.FilterPanel = new MvcHtmlString(filterPanelHtml);
+
+            // 3. Rendereljük a metrikákat a szűrőértékekkel
+            var renderedMetrics = new Dictionary<MetricTile, MvcHtmlString>();
+            foreach (var metric in favoriteMetrics)
+            {
+                string templatePath = Server.MapPath($"~/Views/Metrics/Templates/{metric.FileName}.thtml");
+                if (System.IO.File.Exists(templatePath))
+                {
+                    string templateContent = System.IO.File.ReadAllText(templatePath);
+                    string renderedHtml = _templateProcessor.ProcessTemplate(templateContent, _dataService, filterValues);
+                    renderedMetrics.Add(metric, new MvcHtmlString(CleanupReportContent(renderedHtml))); // Tisztítás, hogy a szűrők ne jelenjenek meg a metrikán belül
+                }
+            }
+
             return View(renderedMetrics);
         }
 
@@ -66,27 +112,23 @@ namespace Core.Controllers
             }
 
             string templateContent = System.IO.File.ReadAllText(templatePath);
+            var filterValues = GetFilterValuesFromRequest();
 
-            // Metaadatok átadása a nézetnek
             ViewBag.MetricName = ParseMetaTag(templateContent, "meta-name");
             ViewBag.MetricDescription = ParseMetaTag(templateContent, "meta-description");
             ViewBag.MetricOwner = ParseMetaTag(templateContent, "meta-owner");
+            ViewBag.FileName = metricName;
 
-            // Metrika renderelése
-            // A jövőben a dashboardról érkező szűrőket itt lehet majd átadni
-            string renderedHtml = _templateProcessor.ProcessTemplate(templateContent, _dataService, null);
-            ViewBag.RenderedMetric = new MvcHtmlString(renderedHtml);
+            string renderedContent = _templateProcessor.ProcessTemplate(templateContent, _dataService, filterValues);
+            ViewBag.RenderedMetric = WrapMetricWithForm(renderedContent, metricName);
 
             return View();
         }
 
-        // --- API for Toggling Favorites ---
         [HttpPost]
         [ValidateAntiForgeryToken]
         public JsonResult ToggleFavorite(string metricName)
         {
-            // This logic is very similar to the ReportController's version
-            // It operates on the UserMetricFavorites table instead
             string userName = User.Identity.Name;
             try
             {
@@ -131,7 +173,7 @@ namespace Core.Controllers
             }
         }
 
-        // --- Helper Methods ---
+        #region Helper Methods
         private List<MetricTile> GetMetricsWithMetadata()
         {
             string userName = User.Identity.Name;
@@ -187,5 +229,52 @@ namespace Core.Controllers
             if (!Directory.Exists(templatePath)) return new List<string>();
             return Directory.GetFiles(templatePath, "*.thtml").Select(Path.GetFileNameWithoutExtension).ToList();
         }
+
+        private Dictionary<string, string> GetFilterValuesFromRequest()
+        {
+            var filterValues = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var allKeys = Request.QueryString.AllKeys.Concat(Request.Form.AllKeys).Distinct();
+            foreach (string key in allKeys)
+            {
+                if (!string.IsNullOrEmpty(key))
+                {
+                    filterValues[key] = Request[key];
+                }
+            }
+            return filterValues;
+        }
+
+        private MvcHtmlString WrapMetricWithForm(string content, string metricName)
+        {
+            var filterControls = ExtractFilterControls(content);
+            if (!filterControls.Any())
+            {
+                return new MvcHtmlString(content);
+            }
+
+            string hiddenInput = $"<input type='hidden' name='metricName' value='{metricName}' />";
+            string filterPanel = $@"<div class='card mb-4 filter-panel'><div class='card-header d-flex justify-content-between align-items-center bg-light'><h3 class='mb-0'>Filter Options</h3></div><div class='card-body'><div class='row'>{string.Join("", filterControls)}</div></div></div>";
+            string cleanedContent = CleanupReportContent(content);
+            string fullHtml = $"<form id='metricForm' action='{Url.Action("Display", "Metric")}' method='get'>{hiddenInput}{filterPanel}<div class='metric-content-full'>{cleanedContent}</div></form>";
+            return new MvcHtmlString(fullHtml);
+        }
+
+        private List<string> ExtractFilterControls(string reportContent)
+        {
+            var filters = new List<string>();
+            string pattern = @"<div\s+class\s*=\s*['""]filter-component.*?</div>";
+            foreach (Match match in Regex.Matches(reportContent, pattern, RegexOptions.Singleline | RegexOptions.IgnoreCase))
+            {
+                filters.Add($"<div class='col-md-3'>{match.Value}</div>");
+            }
+            return filters;
+        }
+
+        private string CleanupReportContent(string reportContent)
+        {
+            string pattern = @"<div\s+class\s*=\s*['""]filter-component.*?</div>";
+            return Regex.Replace(reportContent, pattern, "", RegexOptions.Singleline | RegexOptions.IgnoreCase);
+        }
+        #endregion
     }
 }

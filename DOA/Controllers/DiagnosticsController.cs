@@ -10,6 +10,12 @@ namespace Core.Controllers
 {
     public class DiagnosticsController : Controller
     {
+
+        public DiagnosticsController()
+        {
+            DebugHelper.Initialize(); // Nincs szükség paraméterre
+        }
+
         public ActionResult Index()
         {
             var diagnostics = new Dictionary<string, string>();

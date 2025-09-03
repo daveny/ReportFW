@@ -18,15 +18,35 @@
 
     <hr />
 
-    <div class="metric-content-full">
-        @Html.Raw(ViewBag.RenderedMetric)
-    </div>
+    <!-- A RenderedMetric már tartalmazza a formot és a szűrőpanelt -->
+    @Html.Raw(ViewBag.RenderedMetric)
+
 </div>
 
 @section styles {
     <style>
-        .metric-content-full .chart-container {
-            height: 60vh; /* Make the chart taller on its own page */
+        .metric-content-full .chart-container,
+        .metric-content-full div[style*='height:400px'] { /* A thtml-ben definiált magasságot célozzuk */
+            height: 60vh !important;
         }
     </style>
+}
+
+@section scripts {
+    <script>
+    $(document).ready(function () {
+        // Automatikusan elküldi az űrlapot, ha egy szűrő (pl. legördülő) értéke megváltozik
+        $('.filter-panel').on('change', 'select, input[type=date], input[type=checkbox]', function() {
+            $('#metricForm').submit();
+        });
+
+        // A szöveges és szám beviteli mezőknél csak Enter leütésére küldje el
+        $('.filter-panel').on('keypress', 'input[type=text], input[type=number]', function(e) {
+            if (e.which === 13) { // Enter key
+                e.preventDefault(); // Megakadályozza az alapértelmezett viselkedést
+                $('#metricForm').submit();
+            }
+        });
+    });
+    </script>
 }

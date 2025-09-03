@@ -121,6 +121,7 @@
     <Compile Include="App_Start\FilterConfig.cs" />
     <Compile Include="App_Start\RouteConfig.cs" />
     <Compile Include="Controllers\DiagnosticsController.cs" />
+    <Compile Include="Controllers\EditorController.cs" />
     <Compile Include="Controllers\HomeController.cs" />
     <Compile Include="Controllers\ReportController.cs" />
     <Compile Include="Controllers\ReportController_old.cs" />
@@ -234,6 +235,7 @@
     <Content Include="Views\Metric\Library.cshtml" />
     <Content Include="Views\Metric\MyMetrics.cshtml" />
     <Content Include="Views\Metric\Display.cshtml" />
+    <Content Include="Views\Editor\Index.cshtml" />
     <None Include="Views\Reports\Templates\Test.thtml" />
     <Content Include="Views\Report\RenderReport.cshtml" />
     <Content Include="Views\Report\List.cshtml" />

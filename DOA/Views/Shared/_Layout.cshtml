@@ -13,8 +13,18 @@
     <link href="~/Content/bootstrap-datepicker.min.css" rel="stylesheet" />
     <link href="~/Content/all.min.css" rel="stylesheet" />
     <link href="~/Content/css/filters.css" rel="stylesheet" />
+    <script src="~/Scripts/chart.min.js"></script>
 
+    <!-- Script hivatkozások -->
+    <script src="~/Scripts/jquery-3.7.1.min.js"></script>
+
+    <!-- JAVÍTVA: Bootstrap 5 JS Bundle hozzáadva a legördülő menühöz -->
+    <script src="~/Scripts/bootstrap.bundle.min.js"></script>
+
+    <script src="~/Scripts/datatables.min.js"></script>
+    <script src="~/Scripts/bootstrap-datepicker.min.js"></script>
     @RenderSection("styles", required: false)
+
 </head>
 <body>
     <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-dark bg-dark">
@@ -37,6 +47,8 @@
                         <ul class="dropdown-menu" aria-labelledby="navbarDropdownMetrics">
                             <li>@Html.ActionLink("Metric Library", "Library", "Metric", new { area = "" }, new { @class = "dropdown-item" })</li>
                             <li>@Html.ActionLink("My Metrics", "MyMetrics", "Metric", new { area = "" }, new { @class = "dropdown-item" })</li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>@Html.ActionLink("Új metrika (.thtml Editor)", "Index", "Editor", new { area = "" }, new { @class = "dropdown-item" })</li>
                         </ul>
                     </li>
 
@@ -64,16 +76,6 @@
             <p>&copy; @DateTime.Now.Year - My ASP.NET Application</p>
         </footer>
     </div>
-
-    <!-- Script hivatkozások -->
-    <script src="~/Scripts/jquery-3.7.1.min.js"></script>
-
-    <!-- JAVÍTVA: Bootstrap 5 JS Bundle hozzáadva a legördülő menühöz -->
-    <script src="~/Scripts/bootstrap.bundle.min.js"></script>
-
-    <script src="~/Scripts/chart.min.js"></script>
-    <script src="~/Scripts/datatables.min.js"></script>
-    <script src="~/Scripts/bootstrap-datepicker.min.js"></script>
 
     @RenderSection("scripts", required: false)
 </body>

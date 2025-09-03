@@ -35,6 +35,7 @@ namespace Core.Helpers
         public bool Stacked { get; set; } = false;
         public string[] BackgroundColors { get; set; }
         public string[] BorderColors { get; set; }
+        public Dictionary<string, string> ValueColors { get; set; }
     }
 
     public class LineChartOptions : ChartOptions
@@ -42,6 +43,7 @@ namespace Core.Helpers
         public bool ShowPoints { get; set; } = true;
         public int Tension { get; set; } = 0; // 0 = straight lines, higher values = more curved
         public string[] Colors { get; set; }
+        public Dictionary<string, string> ValueColors { get; set; }
     }
 
     public class PieChartOptions : ChartOptions
@@ -53,6 +55,7 @@ namespace Core.Helpers
         public string ValuePosition { get; set; } = "legend"; // 'inside', 'outside', or 'legend'
         public string[] BackgroundColors { get; set; }
         public string[] BorderColors { get; set; }
+        public Dictionary<string, string> ValueColors { get; set; }
     }
 
     public class ChartDataset

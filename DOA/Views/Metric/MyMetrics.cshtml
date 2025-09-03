@@ -5,6 +5,11 @@
     <h1 class="my-4">My Metrics</h1>
     <p>Your personalized collection of favorite metrics.</p>
 
+    <!-- Form a szűrőpanelhez -->
+    <form id="myMetricsForm" action="@Url.Action("MyMetrics", "Metric")" method="get">
+        @Html.Raw(ViewBag.FilterPanel)
+    </form>
+
     <div class="mymetrics-container">
         @foreach (var entry in Model)
         {

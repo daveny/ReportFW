@@ -1,6 +1,6 @@
 ﻿using System;
 using System.IO;
-using System.Web;
+using System.Web.Hosting; // <-- Fontos: Ezt a névteret használjuk
 
 namespace Core.Helpers
 {
@@ -10,7 +10,8 @@ namespace Core.Helpers
         private static bool _initialized = false;
         private static string _logPath;
 
-        public static void Initialize(HttpServerUtilityBase server)
+        // A metódusnak már nincs szüksége a 'server' paraméterre
+        public static void Initialize()
         {
             if (_initialized) return;
 
@@ -20,16 +21,22 @@ namespace Core.Helpers
 
                 try
                 {
-                    _logPath = server.MapPath("~/App_Data/debug_log.txt");
+                    // A HostingEnvironment.MapPath statikus, bárhonnan hívható
+                    _logPath = HostingEnvironment.MapPath("~/App_Data/debug_log.txt");
 
-                    // Ensure directory exists
+                    // Ellenőrizzük, hogy az útvonal nem null-e (pl. ha nem webes környezetben fut)
+                    if (_logPath == null)
+                    {
+                        System.Diagnostics.Debug.WriteLine("Error initializing debug logger: Could not map path. Not running in a web context?");
+                        return;
+                    }
+
                     string dir = Path.GetDirectoryName(_logPath);
                     if (!Directory.Exists(dir))
                     {
                         Directory.CreateDirectory(dir);
                     }
 
-                    // Create or clear the log file
                     using (var writer = new StreamWriter(_logPath, false))
                     {
                         writer.WriteLine($"Debug log initialized at {DateTime.Now}");
@@ -46,23 +53,28 @@ namespace Core.Helpers
 
         public static void Log(string message)
         {
+            // Ha a naplózás valamiért nem inicializálódott, próbáljuk meg most.
+            if (!_initialized)
+            {
+                Initialize();
+            }
+
+            // Ha még mindig nem sikerült (pl. _logPath null), akkor csak a Debug ablakba írunk.
+            if (string.IsNullOrEmpty(_logPath))
+            {
+                System.Diagnostics.Debug.WriteLine($"[LOG-FALLBACK] {message}");
+                return;
+            }
+
             try
             {
-                if (!_initialized || string.IsNullOrEmpty(_logPath))
-                {
-                    System.Diagnostics.Debug.WriteLine($"Debug log not initialized. Message: {message}");
-                    return;
-                }
-
                 lock (_lock)
                 {
                     using (var writer = new StreamWriter(_logPath, true))
                     {
-                        writer.WriteLine($"{DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")} - {message}");
+                        writer.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - {message}");
                     }
                 }
-
-                // Also output to debug window
                 System.Diagnostics.Debug.WriteLine(message);
             }
             catch (Exception ex)

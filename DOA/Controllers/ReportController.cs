@@ -63,7 +63,7 @@ namespace Core.Controllers
         public JsonResult ToggleFavorite(string reportName)
         {
             // Biztosítjuk, hogy a naplózó inicializálva legyen
-            DebugHelper.Initialize(this.Server);
+            DebugHelper.Initialize();
             DebugHelper.Log($"ToggleFavorite called for report: '{reportName}' by user: '{User.Identity.Name}'");
 
             if (string.IsNullOrEmpty(reportName))
@@ -168,7 +168,7 @@ namespace Core.Controllers
         {
             try
             {
-                DebugHelper.Initialize(Server);
+                DebugHelper.Initialize();
                 DebugHelper.Log($"Starting RenderReport for template: {templateName}");
                 var filterValues = GetFilterValuesFromRequest();
                 string templatePath = Server.MapPath($"~/Views/Reports/Templates/{templateName}.thtml");
@@ -194,7 +194,7 @@ namespace Core.Controllers
         {
             try
             {
-                DebugHelper.Initialize(Server);
+                DebugHelper.Initialize();
                 DebugHelper.Log($"Starting RenderReportDEV for template: {templateName}");
                 var filterValues = GetFilterValuesFromRequest();
                 string templatePath = Server.MapPath($"~/Views/Reports/TemplatesDEV/{templateName}.thtml");
