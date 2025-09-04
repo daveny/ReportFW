@@ -42,7 +42,7 @@
   formatting={
     title: "Revenue by Country and Year",
     valueColors: {
-      "AU": "#04ff00"
+      "AU": "#001eff"
     }
   }
 }}

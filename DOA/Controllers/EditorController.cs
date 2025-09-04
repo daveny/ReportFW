@@ -96,6 +96,35 @@ namespace Core.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        public JsonResult DeleteMetric(string fileName)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(fileName))
+                    return Json(new { success = false, message = "fileName is required" });
+
+                if (!fileName.EndsWith(".thtml", StringComparison.OrdinalIgnoreCase))
+                    fileName += ".thtml";
+
+                var safe = Path.GetFileName(fileName);
+                var path = Path.Combine(MetricsRoot, safe);
+
+                if (!System.IO.File.Exists(path))
+                    return Json(new { success = false, message = "File not found" });
+
+                System.IO.File.Delete(path);
+                DebugHelper.Log($"DeleteMetric OK: {path}");
+                return Json(new { success = true, message = $"Metric deleted: {safe}" });
+            }
+            catch (Exception ex)
+            {
+                DebugHelper.Log($"DeleteMetric ERROR: {ex}");
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         [ValidateInput(false)]
         public ContentResult RenderPreview(string thtmlCode)
         {

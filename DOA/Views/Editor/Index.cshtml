@@ -31,11 +31,12 @@
             </div>
             <div class="col-md-5">
                 <label class="form-label" for="txtFileName"><strong>Mentés másként vagy új metrika neve</strong></label>
-                <div class="input-group">
-                    <input id="txtFileName" class="form-control" placeholder="pl. uj_metrika_neve" />
-                    <button id="btnNew" class="btn btn-outline-secondary" type="button" title="Új metrika létrehozása"><i class="fas fa-plus"></i> Új</button>
-                    <button id="btnSave" class="btn btn-success" type="button" title="Mentés"><i class="fas fa-save"></i> Mentés</button>
-                </div>
+<div class="input-group">
+    <input id="txtFileName" class="form-control" placeholder="pl. uj_metrika_neve" />
+    <button id="btnNew" class="btn btn-outline-secondary" type="button" title="Új metrika létrehozása"><i class="fas fa-plus"></i> Új</button>
+    <button id="btnSave" class="btn btn-success" type="button" title="Mentés"><i class="fas fa-save"></i> Mentés</button>
+    <button id="btnDelete" class="btn btn-outline-danger" type="button" title="Törlés"><i class="fas fa-trash"></i></button>
+</div>
             </div>
         </div>
     </div>
@@ -134,6 +135,7 @@
   const btnNew = document.getElementById('btnNew');
   const btnSave = document.getElementById('btnSave');
   const btnPreview = document.getElementById('btnPreview');
+  const btnDelete = document.getElementById('btnDelete');
   const fileNameInput = document.getElementById('txtFileName');
 
   const token = document.querySelector("input[name='__RequestVerificationToken']")?.value || "";
@@ -151,6 +153,22 @@
   const btnAddColorPair = document.getElementById('btnAddColorPair');
 
   function escapeQuotes(s){ return (s||'').replace(/\\/g,'\\\\').replace(/"/g,'\\"'); }
+
+  // Cleanup: remove accidental literal "\n" text nodes that may appear from templating
+  (function removeBackslashNTextNodes(){
+    const root = document.body;
+    const walk = (el) => {
+      const nodes = Array.from(el.childNodes);
+      for (const n of nodes){
+        if (n.nodeType === 3 && n.textContent && n.textContent.trim() === "\\n") {
+          n.parentNode.removeChild(n);
+        } else if (n.nodeType === 1) {
+          walk(n);
+        }
+      }
+    };
+    walk(root);
+  })();
 
   function addValueColorPair(val, col){
     const row = document.createElement('div');
@@ -263,13 +281,36 @@ ${fmt.length ? fmt.join(',\n') : '    '}
 
   function generateThtml(){
     const newChart = buildChartBlock();
+
+    // 1) Update or insert meta comment lines from inputs
+    const setMeta = (src, key, value) => {
+      const clean = (value || '').toString().trim();
+      const rx = new RegExp(`<!--\\s*${key}\\s*:\\s*[\\s\\S]*?-->`, 'i');
+      const line = clean ? `<!-- ${key}: ${clean} -->` : '';
+      if (rx.test(src)) {
+        return line ? src.replace(rx, line) : src.replace(rx, '').replace(/^\s*\n/, '');
+      } else {
+        return line ? (line + "\n" + src) : src;
+      }
+    };
+
+    let withMeta = originalThml || '';
+    // Prepend in reverse order so final order becomes: name, description, owner
+    withMeta = setMeta(withMeta, 'meta-owner', owner.value);
+    withMeta = setMeta(withMeta, 'meta-description', description.value);
+    withMeta = setMeta(withMeta, 'meta-name', metricName.value);
+
+    // Ensure a blank line between meta block and first component
+    withMeta = withMeta.replace(/^(<!--[^]*?-->)\s*(?=\{\{|$)/, (m)=> m.replace(/\s*$/, '\n\n'));
+
+    // 2) Replace or append chart block
     let final;
     if (originalBlocks.length === 0) {
-      final = newChart;
+      final = withMeta + (withMeta.trim() ? (withMeta.endsWith('\n')?'':'\n') : '') + newChart;
     } else if (chartBlockIndex >= 0) {
-      final = originalThml.replace(originalBlocks[chartBlockIndex].full, newChart);
+      final = withMeta.replace(originalBlocks[chartBlockIndex].full, newChart);
     } else {
-      final = originalThml.trim(); if (final && !/\n$/.test(final)) final += '\n\n';
+      final = withMeta.trim(); if (final && !/\n$/.test(final)) final += '\n\n';
       final += newChart;
     }
     return final;
@@ -436,6 +477,34 @@ ${fmt.length ? fmt.join(',\n') : '    '}
       .catch(err => alert('Save error: ' + err.message));
   });
 
+  // Delete current metric file
+  if (btnDelete){
+    btnDelete.addEventListener('click', () => {
+      let name = (fileNameInput.value || ddlFiles.value || '').trim();
+      if (!name){ alert('Nincs kiválasztott fájl.'); return; }
+      if (!/\.thtml$/i.test(name)) name += '.thtml';
+      if (!confirm('Biztosan törlöd a metrikát: ' + name + ' ?')) return;
+
+      const body = new URLSearchParams();
+      body.set('__RequestVerificationToken', token);
+      body.set('fileName', name);
+
+      fetch('@Url.Action("DeleteMetric","Editor")', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' }, body: body.toString() })
+        .then(r => r.json())
+        .then(data => {
+          if (!data.success) throw new Error(data.message || 'Delete failed');
+          alert(data.message || 'Deleted');
+          // Remove from dropdown
+          [...ddlFiles.options].forEach(o => { if (o.value.toLowerCase() === name.toLowerCase()) o.remove(); });
+          // Reset form and preview
+          ddlFiles.value=''; fileNameInput.value=''; originalThml=''; originalBlocks=[]; chartBlockIndex=-1; resetForm();
+          const frame = document.getElementById('previewFrame');
+          const doc = frame.contentDocument || frame.contentWindow.document; if (doc.body) doc.body.innerHTML = '';
+        })
+        .catch(err => alert('Delete error: ' + err.message));
+    });
+  }
+
 })();
     </script>
     <style>
@@ -480,3 +549,4 @@ ${fmt.length ? fmt.join(',\n') : '    '}
         #sqlQuery { flex: 1 1 auto; width: 100%; height: 100%; min-height: 0; box-sizing: border-box; }
     </style>
 }
+

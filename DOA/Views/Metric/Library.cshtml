@@ -16,7 +16,10 @@
                     </div>
                     <div class="tile-footer">
                         <span class="tile-owner">Owner: @metric.Owner</span>
-                        <i class="favorite-star @(metric.IsFavorite ? "fas fa-star is-favorite" : "far fa-star")"></i>
+                        <span class="tile-actions">
+                            <i class="favorite-star @(metric.IsFavorite ? "fas fa-star is-favorite" : "far fa-star")" title="Toggle favorite"></i>
+                            <button type="button" class="btn btn-sm btn-outline-danger ms-2 delete-metric" title="Delete"><i class="fas fa-trash"></i></button>
+                        </span>
                     </div>
                 </div>
             </a>
@@ -44,6 +47,31 @@
                             starIcon.toggleClass('fas far is-favorite');
                         } else { alert('Error: ' + response.message); }
                     }
+                });
+            });
+
+            $('.delete-metric').on('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                var btn = $(this);
+                var file = btn.closest('.report-tile').data('metric-name');
+                // file names in model are without extension
+                var fileName = /\.thtml$/i.test(file) ? file : file + '.thtml';
+                if (!confirm('Delete metric: ' + fileName + ' ?')) return;
+                var token = $('input[name="__RequestVerificationToken"]').val();
+
+                $.ajax({
+                    url: '@Url.Action("DeleteMetric", "Editor")',
+                    type: 'POST',
+                    data: { __RequestVerificationToken: token, fileName: fileName },
+                    success: function (response) {
+                        if (response.success) {
+                            // remove the whole tile link
+                            btn.closest('a.report-tile-link').remove();
+                        } else { alert('Error: ' + response.message); }
+                    },
+                    error: function (xhr) { alert('Delete failed: ' + xhr.statusText); }
                 });
             });
         });
