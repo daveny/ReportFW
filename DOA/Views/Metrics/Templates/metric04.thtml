@@ -1,0 +1,45 @@
+<!-- meta-name: Active Users -->
+<!-- meta-description: Shows sales totals from FR, DE, CA, and AU, grouped by year and country. -->
+<!-- meta-owner: David Nagy -->
+
+{{
+  representation="filter";
+  type="dropdown";
+  param="Country";
+  label="Country:";
+  query="SELECT DISTINCT CountryRegionCode FROM Sales.SalesTerritory WHERE CountryRegionCode IN ('FR', 'DE', 'CA', 'AU')";
+  valueField="CountryRegionCode";
+  textField="CountryRegionCode";
+}}
+
+{{
+  query="
+
+    SELECT
+        YEAR(soh.OrderDate) as OrderYear,
+        st.CountryRegionCode,
+        SUM(sod.LineTotal) as TotalSales
+    FROM
+        [Sales].SalesOrderDetail sod
+    INNER JOIN
+        Sales.SalesOrderHeader soh ON sod.SalesOrderID = soh.SalesOrderID
+    INNER JOIN
+        Sales.SalesTerritory st ON st.TerritoryID = soh.TerritoryID
+    WHERE
+        st.CountryRegionCode IN ('FR', 'DE', 'CA', 'AU')
+        AND (@Country IS NULL OR st.CountryRegionCode = @Country)
+    GROUP BY
+        YEAR(soh.OrderDate),
+        st.CountryRegionCode
+    ORDER BY
+        OrderYear, CountryRegionCode
+  
+  ";
+  representation="barchart";
+  series="TotalSales";
+  legends="OrderYear";
+  groupBy="CountryRegionCode";
+  formatting={
+    title: "Revenue by Country and Year"
+  }
+}}
