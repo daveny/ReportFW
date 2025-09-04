@@ -278,9 +278,22 @@ ${fmt.length ? fmt.join(',\n') : '    '}
   function renderPreview(){
     const thtml = generateThtml();
     const url = '@Url.Action("RenderPreview","Editor")';
+
+    // Gyűjtsük ki a meglévő előnézetből a szűrők aktuális értékeit
+    const framePrev = document.getElementById('previewFrame');
+    const prevDoc = framePrev.contentDocument || framePrev.contentWindow?.document;
+    const formVals = {};
+    if (prevDoc && prevDoc.body){
+      prevDoc.querySelectorAll('.filter-dropdown').forEach(el => {
+        if (el.name) formVals[el.name] = el.value;
+      });
+    }
+
     const body = new URLSearchParams();
     body.set('__RequestVerificationToken', token);
     body.set('thtmlCode', thtml);
+    // Addjuk hozzá a paramétereket a POST-hoz
+    Object.keys(formVals).forEach(k => body.set(k, formVals[k] ?? ''));
 
     fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' }, body: body.toString() })
       .then(r => r.text())
@@ -314,6 +327,13 @@ ${fmt.length ? fmt.join(',\n') : '    '}
             // copy attributes if any; our components use inline scripts only
             if (old.textContent) s.text = old.textContent;
             old.parentNode.replaceChild(s, old);
+          });
+          // Auto-refresh on filter change
+          Array.from(doc.body.querySelectorAll('.filter-dropdown')).forEach(el => {
+            el.addEventListener('change', () => {
+              // jelezzünk a szülőnek
+              try { frame.contentWindow.parent.postMessage({ type: 'metric-editor-filter-change' }, '*'); } catch(e) { /* no-op */ }
+            });
           });
         }).catch(src => alert('Preview script load error: ' + src));
       })
@@ -352,6 +372,12 @@ ${fmt.length ? fmt.join(',\n') : '    '}
   });
 
   btnPreview.addEventListener('click', () => renderPreview());
+  // Üzenet figyelése az iframe-ből (filter változás)
+  window.addEventListener('message', (e) => {
+    if (e?.data && e.data.type === 'metric-editor-filter-change') {
+      renderPreview();
+    }
+  });
 
   btnSave.addEventListener('click', () => {
     const thtml = generateThtml();
