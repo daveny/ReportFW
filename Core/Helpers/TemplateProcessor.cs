@@ -67,6 +67,14 @@ namespace Core.Helpers
                         }
 
                         data = dataService.ExecuteQuery(query, sqlParameters);
+                        try
+                        {
+                            var cols = string.Join(", ", data.Columns.Cast<DataColumn>().Select(c => c.ColumnName));
+                            string rep;
+                            instructions.TryGetValue("representation", out rep);
+                            DebugHelper.Log($"Component rep='{rep}' rows={data.Rows.Count} cols=[{cols}] queryLen={(query?.Length ?? 0)}");
+                        }
+                        catch { /* logging best-effort */ }
                     }
 
                     renderedComponent = _chartRenderer.RenderChart(data, instructions, requestParameters);

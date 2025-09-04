@@ -193,7 +193,12 @@
     if (!originalThml.trim()) return; // Ne próbálja feldolgozni az üres fájlt
 
     let success = false;
-    const metaMatch = originalThml.match(//);
+    // Extract meta from HTML comments: <!-- meta-name: ... -->, etc.
+    const metaName = (originalThml.match(/<!--\s*meta-name:\s*([\s\S]*?)-->/i) || [])[1] || '';
+    const metaDesc = (originalThml.match(/<!--\s*meta-description:\s*([\s\S]*?)-->/i) || [])[1] || '';
+    const metaOwner = (originalThml.match(/<!--\s*meta-owner:\s*([\s\S]*?)-->/i) || [])[1] || '';
+    const metaString = `metricName: ${metaName}\n description: ${metaDesc}\n owner: ${metaOwner}`;
+    const metaMatch = (metaName || metaDesc || metaOwner) ? [null, metaString] : null;
     if (metaMatch){
       success = true; // Legalább a metaadatokat megtaláltuk
       const m = metaMatch[1];
@@ -206,8 +211,9 @@
     const chartInner = (chartBlockIndex >= 0) ? originalBlocks[chartBlockIndex].inner : '';
     if (chartInner){
       success = true; // A chart blokkot is megtaláltuk
-      const qMatch = chartInner.match(/query\s*=\s*["']([\s\S]*?)["']\s*;?/i);
-      if (qMatch) sqlQuery.value = qMatch[1].replace(/\\n/g,'\n').replace(/\\"/g,'"').replace(/\\\\/g,'\\');
+      // Capture with matching quote type so single quotes inside SQL don't terminate the match
+      const qMatch = chartInner.match(/query\s*=\s*(["'])([\s\S]*?)\1\s*;?/i);
+      if (qMatch) sqlQuery.value = qMatch[2].replace(/\\n/g,'\n').replace(/\\"/g,'"').replace(/\\\\/g,'\\');
       const rep = chartInner.match(/representation\s*=\s*["']([^"']+)["']/i); if (rep) representation.value = rep[1];
       const ser = chartInner.match(/series\s*=\s*["']([^"']+)["']/i); if (ser) series.value = ser[1];
       const leg = chartInner.match(/legends\s*=\s*["']([^"']+)["']/i); if (leg) legends.value = leg[1];
@@ -238,7 +244,8 @@
     if (title.value.trim()) fmt.push('    title: "'+escapeQuotes(title.value.trim())+'"');
     if (lines.length)       fmt.push('    valueColors: {\n'+lines.join(',\n')+'\n    }');
     const rep = (representation.value || '').trim() || 'barchart';
-    const q = (sqlQuery.value || '').replace(/\r/g,'').replace(/\n/g,'\\n');
+    // Tartsuk meg a valós sortöréseket, ne tegyünk \n-t
+    const q = (sqlQuery.value || '').replace(/\r/g,'');
 
     return `{{
   query="
@@ -247,7 +254,7 @@ ${escapeQuotes(q)}
   representation="${rep}";
   series="${(series.value||'').trim()}";
   legends="${(legends.value||'').trim()}";
-  groupby="${(groupBy.value||'').trim()}";
+  groupBy="${(groupBy.value||'').trim()}";
   formatting={
 ${fmt.length ? fmt.join(',\n') : '    '}
   }
@@ -298,7 +305,16 @@ ${fmt.length ? fmt.join(',\n') : '    '}
           const s = doc.createElement('script');
           s.src = src; s.onload = res; s.onerror = () => rej(src); doc.head.appendChild(s);
         })), Promise.resolve()).then(() => {
+          // Insert HTML
           doc.body.innerHTML = html;
+          // Execute inline scripts inside the inserted HTML (innerHTML does not run them)
+          const inlineScripts = Array.from(doc.body.querySelectorAll('script'));
+          inlineScripts.forEach(old => {
+            const s = doc.createElement('script');
+            // copy attributes if any; our components use inline scripts only
+            if (old.textContent) s.text = old.textContent;
+            old.parentNode.replaceChild(s, old);
+          });
         }).catch(src => alert('Preview script load error: ' + src));
       })
       .catch(err => alert('Preview error: ' + err));

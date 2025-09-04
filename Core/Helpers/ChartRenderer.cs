@@ -62,9 +62,19 @@ namespace Core.Helpers
 
             instructions.TryGetValue("groupBy", out string groupByColumn);
 
+            // Resolve actual column names case-insensitively
+            Func<string, string> resolve = (name) =>
+                data?.Columns.Cast<DataColumn>()
+                    .FirstOrDefault(c => c.ColumnName.Equals(name, StringComparison.OrdinalIgnoreCase))?.ColumnName ?? name;
+            legendsColumn = resolve(legendsColumn);
+            if (!string.IsNullOrEmpty(groupByColumn)) groupByColumn = resolve(groupByColumn);
+            for (int i = 0; i < seriesColumns.Count; i++) seriesColumns[i] = resolve(seriesColumns[i]);
+
             if (data.Columns.Count == 0 || !data.Columns.Contains(legendsColumn) || seriesColumns.Any(s => !data.Columns.Contains(s)))
             {
-                return "";
+                var available = string.Join(", ", data.Columns.Cast<DataColumn>().Select(c => c.ColumnName));
+                var needed = string.Join(", ", new[] { legendsColumn }.Concat(seriesColumns));
+                return $"<div class='alert alert-warning'>No chart: columns not found. Need [{HttpUtility.HtmlEncode(needed)}], available [{HttpUtility.HtmlEncode(available)}]</div>";
             }
 
             var labels = data.AsEnumerable().Select(r => r[legendsColumn].ToString()).Distinct().OrderBy(l => l).ToList();
@@ -170,9 +180,17 @@ namespace Core.Helpers
             if (string.IsNullOrEmpty(seriesValue) && data.Columns.Count > 1) seriesValue = data.Columns[1].ColumnName;
             var seriesColumns = ChartHelpers.ParseArray(seriesValue);
 
+            // Resolve columns case-insensitively
+            Func<string, string> resolve = (name) => data.Columns.Cast<DataColumn>()
+                .FirstOrDefault(c => c.ColumnName.Equals(name, StringComparison.OrdinalIgnoreCase))?.ColumnName ?? name;
+            legendsColumn = resolve(legendsColumn);
+            for (int i = 0; i < seriesColumns.Count; i++) seriesColumns[i] = resolve(seriesColumns[i]);
+
             if (data.Columns.Count == 0 || !data.Columns.Contains(legendsColumn) || seriesColumns.Any(s => !data.Columns.Contains(s)))
             {
-                return "";
+                var available = string.Join(", ", data.Columns.Cast<DataColumn>().Select(c => c.ColumnName));
+                var needed = string.Join(", ", new[] { legendsColumn }.Concat(seriesColumns));
+                return $"<div class='alert alert-warning'>No chart: columns not found. Need [{HttpUtility.HtmlEncode(needed)}], available [{HttpUtility.HtmlEncode(available)}]</div>";
             }
 
             var labels = data.AsEnumerable().Select(r => r[legendsColumn].ToString()).Distinct().OrderBy(l => l).ToList();
@@ -235,9 +253,17 @@ namespace Core.Helpers
             if (string.IsNullOrEmpty(seriesColumn) && data.Columns.Count > 1) seriesColumn = data.Columns[1].ColumnName;
 
 
+            // Resolve columns case-insensitively
+            Func<string, string> resolve = (name) => data.Columns.Cast<DataColumn>()
+                .FirstOrDefault(c => c.ColumnName.Equals(name, StringComparison.OrdinalIgnoreCase))?.ColumnName ?? name;
+            legendsColumn = resolve(legendsColumn);
+            seriesColumn  = resolve(seriesColumn);
+
             if (data.Columns.Count == 0 || !data.Columns.Contains(legendsColumn) || !data.Columns.Contains(seriesColumn))
             {
-                return "";
+                var available = string.Join(", ", data.Columns.Cast<DataColumn>().Select(c => c.ColumnName));
+                var needed = string.Join(", ", new[] { legendsColumn, seriesColumn });
+                return $"<div class='alert alert-warning'>No chart: columns not found. Need [{HttpUtility.HtmlEncode(needed)}], available [{HttpUtility.HtmlEncode(available)}]</div>";
             }
 
             var labels = data.AsEnumerable().Select(r => r[legendsColumn].ToString()).ToList();
