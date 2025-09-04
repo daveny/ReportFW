@@ -76,7 +76,25 @@ namespace Core.Controllers
                     {
                         instructions["value"] = filterValues[paramName];
                     }
-                    filterControls.Add($"<div class='col-md-3'>{_chartRenderer.RenderFilterComponent(instructions)}</div>");
+                    // T�lts�k fel az opci�kat a filter query-j�b�l, ha van, �s adjuk �t a request param�tereket is
+                    System.Data.DataTable __data = new System.Data.DataTable();
+                    if (instructions.TryGetValue("query", out var __q) || instructions.TryGetValue("dataSource", out __q))
+                    {
+                        if (!string.IsNullOrWhiteSpace(__q))
+                        {
+                            var __names = System.Text.RegularExpressions.Regex.Matches(__q, @"@(\w+)")
+                                .Cast<System.Text.RegularExpressions.Match>()
+                                .Select(m => m.Groups[1].Value)
+                                .Distinct(System.StringComparer.OrdinalIgnoreCase)
+                                .ToList();
+                            var __params = new System.Collections.Generic.Dictionary<string, object>();
+                            foreach (var __p in __names)
+                                __params[__p] = (filterValues.TryGetValue(__p, out var __v) && !string.IsNullOrEmpty(__v)) ? (object)__v : System.DBNull.Value;
+                            __data = _dataService.ExecuteQuery(__q, __params);
+                        }
+                    }
+                    var __html = _chartRenderer.RenderFilterComponent(__data, instructions, filterValues);
+                    filterControls.Add($"<div class='col-md-3'>{__html}</div>");
                 }
                 filterPanelHtml = $@"<div class='card mb-4 filter-panel'><div class='card-header d-flex justify-content-between align-items-center bg-light'><h3 class='mb-0'>Global Filters</h3><button type='submit' form='myMetricsForm' class='btn btn-primary'>Apply</button></div><div class='card-body'><div class='row'>{string.Join("", filterControls)}</div></div></div>";
             }
