@@ -1,0 +1,36 @@
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE TABLE [dbo].[UserMetricFavorites](
+	[Id] [int] IDENTITY(1,1) NOT NULL,
+	[UserName] [nvarchar](256) NOT NULL,
+	[MetricName] [nvarchar](256) NOT NULL,
+	[CreatedDate] [datetime] NOT NULL,
+ CONSTRAINT [PK_UserMetricFavorites] PRIMARY KEY CLUSTERED 
+(
+	[Id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+
+ALTER TABLE [dbo].[UserMetricFavorites] ADD  DEFAULT (getdate()) FOR [CreatedDate]
+GO
+
+CREATE TABLE [dbo].[UserReportFavorites](
+	[Id] [int] IDENTITY(1,1) NOT NULL,
+	[UserName] [nvarchar](256) NOT NULL,
+	[ReportName] [nvarchar](256) NOT NULL,
+	[CreatedDate] [datetime] NOT NULL,
+ CONSTRAINT [PK_UserReportFavorites] PRIMARY KEY CLUSTERED 
+(
+	[Id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+
+ALTER TABLE [dbo].[UserReportFavorites] ADD  DEFAULT (getdate()) FOR [CreatedDate]
+GO
+
