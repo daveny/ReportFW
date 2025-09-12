@@ -1,8 +1,0 @@
-﻿Editor: add Filters panel with round-trip THTML parsing/serialization; fix JS template string bug; preview binds to .filter-control.
-
-- Add filter editor UI under SQL (add/remove, param/label/query/valueField/textField)
-- Parse existing representation="filter" blocks into UI; serialize back into THTML
-- Generate filters before chart; remove old filter/chart blocks on save/preview
-- Support freetext and datepicker filters in ChartRenderer (type=text|datepicker)
-- Respect default, placeholder, required; unify filter control class for auto-refresh
-- .gitignore: ignore local *.bak and *.pre.bak backups
