@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Data;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Core.Helpers
 {
@@ -14,6 +15,28 @@ namespace Core.Helpers
             // Parse formatting instructions if available
             FormatOptions formatOptions = FormatParser.ParseFormattingOptions(
                 instructions.ContainsKey("formatting") ? instructions["formatting"] : "");
+
+            // Optional pivot transformation before rendering
+            if (instructions != null && (instructions.ContainsKey("pivotRow") || instructions.ContainsKey("pivotCol")))
+            {
+                instructions.TryGetValue("pivotRow", out string pivotRow);
+                instructions.TryGetValue("pivotCol", out string pivotCol);
+                instructions.TryGetValue("pivotValue", out string pivotValue);
+                instructions.TryGetValue("pivotAgg", out string pivotAgg);
+
+                if (!string.IsNullOrWhiteSpace(pivotRow) && !string.IsNullOrWhiteSpace(pivotCol))
+                {
+                    pivotAgg = string.IsNullOrWhiteSpace(pivotAgg) ? "sum" : pivotAgg;
+                    try
+                    {
+                        data = PivotHelper.Pivot(data, pivotRow, pivotCol, pivotValue, pivotAgg);
+                    }
+                    catch (Exception ex)
+                    {
+                        return "<div class='alert alert-danger'>Pivot error: " + System.Web.HttpUtility.HtmlEncode(ex.Message) + "</div>";
+                    }
+                }
+            }
 
             // Build the HTML for the table
             string html = $"<table id='{tableId}' class='display' style='width:100%'><thead><tr>";
