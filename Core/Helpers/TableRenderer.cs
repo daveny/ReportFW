@@ -23,13 +23,42 @@ namespace Core.Helpers
                 instructions.TryGetValue("pivotCol", out string pivotCol);
                 instructions.TryGetValue("pivotValue", out string pivotValue);
                 instructions.TryGetValue("pivotAgg", out string pivotAgg);
+                // Fallbacks: if pivotRow/pivotValue not provided, use groupBy/series
+                if (string.IsNullOrWhiteSpace(pivotRow))
+                {
+                    if (instructions.TryGetValue("groupBy", out string gb) && !string.IsNullOrWhiteSpace(gb))
+                        pivotRow = gb;
+                }
+                if (string.IsNullOrWhiteSpace(pivotValue))
+                {
+                    if (!string.Equals((pivotAgg ?? "").Trim(), "count", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (instructions.TryGetValue("series", out string seriesVal) && !string.IsNullOrWhiteSpace(seriesVal))
+                        {
+                            var firstSeries = seriesVal.Split(',').Select(s => s.Trim()).FirstOrDefault();
+                            if (!string.IsNullOrWhiteSpace(firstSeries)) pivotValue = firstSeries;
+                        }
+                    }
+                }
 
                 if (!string.IsNullOrWhiteSpace(pivotRow) && !string.IsNullOrWhiteSpace(pivotCol))
                 {
                     pivotAgg = string.IsNullOrWhiteSpace(pivotAgg) ? "sum" : pivotAgg;
                     try
                     {
-                        data = PivotHelper.Pivot(data, pivotRow, pivotCol, pivotValue, pivotAgg);
+                        var cfg = new PivotConfig
+                        {
+                            ShowRowTotal = instructions.ContainsKey("pivotShowRowTotal"),
+                            ShowColTotal = instructions.ContainsKey("pivotShowColTotal"),
+                            ShowGrandTotal = instructions.ContainsKey("pivotShowGrandTotal"),
+                            RowOrder = instructions.ContainsKey("pivotRowOrder") ? instructions["pivotRowOrder"].Split(',').Select(s=>s.Trim()).Where(s=>s.Length>0).ToList() : null,
+                            ColOrder = instructions.ContainsKey("pivotColOrder") ? instructions["pivotColOrder"].Split(',').Select(s=>s.Trim()).Where(s=>s.Length>0).ToList() : null,
+                            ColSortNumeric = instructions.ContainsKey("pivotColSort") && instructions["pivotColSort"].Equals("numeric", StringComparison.OrdinalIgnoreCase),
+                            RowSortNumeric = instructions.ContainsKey("pivotRowSort") && instructions["pivotRowSort"].Equals("numeric", StringComparison.OrdinalIgnoreCase),
+                            ColDesc = instructions.ContainsKey("pivotColDir") && instructions["pivotColDir"].Equals("desc", StringComparison.OrdinalIgnoreCase),
+                            RowDesc = instructions.ContainsKey("pivotRowDir") && instructions["pivotRowDir"].Equals("desc", StringComparison.OrdinalIgnoreCase)
+                        };
+                        data = PivotHelper.Pivot(data, pivotRow, pivotCol, pivotValue, pivotAgg, cfg);
                     }
                     catch (Exception ex)
                     {
