@@ -67,6 +67,19 @@
                 </div>
             </div>
 
+            <div class="card mb-3" id="filtersCard">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Filters</span>
+                    <button id="btnAddFilter" type="button" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-plus"></i> Add filter
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="filtersList"></div>
+                    <div id="noFiltersHint" class="text-muted" style="display:none;">No filters yet. Click "Add filter" to create one.</div>
+                </div>
+            </div>
+
             <div class="card mb-3">
                 <div class="card-header">Megjelenítés</div>
                 <div class="card-body row g-3">
@@ -152,6 +165,151 @@
   const valueColorPairs = document.getElementById('valueColorPairs');
   const btnAddColorPair = document.getElementById('btnAddColorPair');
 
+  // --- Filters state + UI ---
+  let filters = [];
+
+  function newFilterTemplate() {
+    return {
+      representation: 'filter',
+      type: 'dropdown',
+      param: '',
+      label: '',
+      query: '',
+      valueField: '',
+      textField: '',
+      default: '',
+      placeholder: '',
+      required: false
+    };
+  }
+
+  function renderFiltersUI(){
+    const list = document.getElementById('filtersList');
+    const hint = document.getElementById('noFiltersHint');
+    if (!list || !hint) return;
+    list.innerHTML = '';
+    if (!filters.length){
+      hint.style.display = 'block';
+      return;
+    }
+    hint.style.display = 'none';
+    filters.forEach((f, idx) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'filter-item border rounded p-2 mb-2';
+      wrap.dataset.index = String(idx);
+      wrap.innerHTML = `
+        <div class="row g-2 align-items-end">
+          <div class="col-12 col-md-3">
+            <label class="form-label">Type</label>
+            <select class="form-select filter-type">
+              <option value="dropdown" ${f.type==='dropdown'?'selected':''}>dropdown</option>
+            </select>
+          </div>
+          <div class="col-12 col-md-3">
+            <label class="form-label">Param</label>
+            <input type="text" class="form-control filter-param" placeholder="Country" value="${f.param||''}">
+          </div>
+          <div class="col-12 col-md-3">
+            <label class="form-label">Label</label>
+            <input type="text" class="form-control filter-label" placeholder="Country:" value="${f.label||''}">
+          </div>
+          <div class="col-12 col-md-3 text-end">
+            <button type="button" class="btn btn-outline-danger btn-filter-remove"><i class="fas fa-trash"></i></button>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Query</label>
+            <textarea rows="3" class="form-control filter-query" placeholder="SELECT DISTINCT ...">${(f.query||'').replace(/</g,'&lt;')}</textarea>
+          </div>
+          <div class="col-12 col-md-3">
+            <label class="form-label">valueField</label>
+            <input type="text" class="form-control filter-valueField" placeholder="Code" value="${f.valueField||''}">
+          </div>
+          <div class="col-12 col-md-3">
+            <label class="form-label">textField</label>
+            <input type="text" class="form-control filter-textField" placeholder="Name" value="${f.textField||''}">
+          </div>
+        </div>`;
+      (function enhanceFilterItem(){
+        // add extra type options
+        const sel = wrap.querySelector('.filter-type');
+        const ensureOpt = (val, text) => {
+          if (!sel) return;
+          if (![...sel.options].some(o => o.value === val)){
+            const o = document.createElement('option'); o.value = val; o.textContent = text; sel.appendChild(o);
+          }
+        };
+        ensureOpt('text','text');
+        ensureOpt('datepicker','datepicker');
+        if (sel && f.type) sel.value = f.type;
+
+        // add default / placeholder / required controls
+        const row = wrap.querySelector('.row');
+        if (row){
+          const mkCol = (html) => { const d = document.createElement('div'); d.className='col-12 col-md-3'; d.innerHTML=html; return d; };
+          const colDef = mkCol('<label class="form-label">Default</label><input type="text" class="form-control filter-default" placeholder="Default value">');
+          const colPh  = mkCol('<label class="form-label">Placeholder</label><input type="text" class="form-control filter-placeholder" placeholder="Placeholder (text/date)">');
+          const colReq = document.createElement('div'); colReq.className = 'col-12 col-md-3 d-flex align-items-center';
+          colReq.innerHTML = '<div class="form-check mt-4"><input class="form-check-input filter-required" type="checkbox" id="tmp_'+(f.param||idx)+'"><label class="form-check-label" for="tmp_'+(f.param||idx)+'">Required</label></div>';
+          row.appendChild(colDef); row.appendChild(colPh); row.appendChild(colReq);
+          colDef.querySelector('.filter-default').value = f.default || '';
+          colPh.querySelector('.filter-placeholder').value = f.placeholder || '';
+          colReq.querySelector('.filter-required').checked = !!f.required;
+        }
+
+        // show/hide query related blocks based on type
+        const toggleByType = () => {
+          const t = (sel?.value || 'dropdown');
+          const qc = wrap.querySelector('.filter-query')?.parentElement;
+          const vc = wrap.querySelector('.filter-valueField')?.parentElement;
+          const tc = wrap.querySelector('.filter-textField')?.parentElement;
+          const ph = wrap.querySelector('.filter-placeholder')?.closest('.col-12, .col-12 col-md-3') || wrap.querySelector('.filter-placeholder')?.parentElement;
+          if (qc) qc.style.display = (t==='dropdown') ? '' : 'none';
+          if (vc) vc.style.display = (t==='dropdown') ? '' : 'none';
+          if (tc) tc.style.display = (t==='dropdown') ? '' : 'none';
+          if (ph) ph.style.display = (t==='dropdown') ? 'none' : '';
+        };
+        toggleByType();
+        if (sel){ sel.addEventListener('change', toggleByType); }
+      })();
+      list.appendChild(wrap);
+    });
+  }
+
+  function syncFilterFromDom(item){
+    const idx = parseInt(item.dataset.index, 10);
+    if (isNaN(idx) || !filters[idx]) return;
+    const f = filters[idx];
+    f.type = item.querySelector('.filter-type')?.value || 'dropdown';
+    f.param = item.querySelector('.filter-param')?.value || '';
+    f.label = item.querySelector('.filter-label')?.value || '';
+    f.query = item.querySelector('.filter-query')?.value || '';
+    f.valueField = item.querySelector('.filter-valueField')?.value || '';
+    f.textField = item.querySelector('.filter-textField')?.value || '';
+    f.default = item.querySelector('.filter-default')?.value || '';
+    f.placeholder = item.querySelector('.filter-placeholder')?.value || '';
+    f.required = !!item.querySelector('.filter-required')?.checked;
+  }
+
+  (function bindFilterEditors(){
+    const list = document.getElementById('filtersList');
+    if (!list) return;
+    list.addEventListener('input', (e) => {
+      const item = e.target.closest('.filter-item');
+      if (item) syncFilterFromDom(item);
+    });
+    list.addEventListener('click', (e) => {
+      const btn = e.target.closest('.btn-filter-remove');
+      if (!btn) return;
+      const item = btn.closest('.filter-item');
+      const idx = parseInt(item.dataset.index, 10);
+      if (!isNaN(idx)) { filters.splice(idx,1); renderFiltersUI(); }
+    });
+    const addBtn = document.getElementById('btnAddFilter');
+    if (addBtn){
+      addBtn.addEventListener('click', () => { filters.push(newFilterTemplate()); renderFiltersUI(); });
+    }
+  })();
+
   function escapeQuotes(s){ return (s||'').replace(/\\/g,'\\\\').replace(/"/g,'\\"'); }
 
   // Cleanup: remove accidental literal "\n" text nodes that may appear from templating
@@ -188,6 +346,8 @@
     sqlQuery.value = '';
     representation.value = 'barchart';
     series.value = legends.value = groupBy.value = title.value = '';
+    filters = [];
+    renderFiltersUI();
   }
 
   function splitBlocks(th){
@@ -225,6 +385,21 @@
       description.value = pick('description');
       owner.value = pick('owner');
     }
+
+    // Load filters from existing THTML filter blocks
+    filters = [];
+    originalBlocks.filter(b => b.isFilter).forEach(b => {
+      const obj = newFilterTemplate();
+      const lines = b.inner.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+      for (const line of lines){
+        const m = line.match(/^(\w+)\s*=\s*"([\s\S]*?)"\s*;?$/);
+        if (!m) continue;
+        const key = m[1]; const val = m[2].replace(/\\n/g,'\n').replace(/\\"/g,'"').replace(/\\\\/g,'\\');
+        if (key in obj || key === 'representation') obj[key] = val;
+      }
+      filters.push(obj);
+    });
+    renderFiltersUI();
 
     const chartInner = (chartBlockIndex >= 0) ? originalBlocks[chartBlockIndex].inner : '';
     if (chartInner){
@@ -279,8 +454,26 @@ ${fmt.length ? fmt.join(',\n') : '    '}
 }}`;
   }
 
+  function buildFilterBlock(f){
+    const kv = [];
+    const push = (k,v) => { if (v != null && String(v).length) kv.push(`  ${k}="${escapeQuotes(String(v))}";`); };
+    push('representation', 'filter');
+    push('type', f.type || 'dropdown');
+    push('param', f.param || '');
+    push('label', f.label || '');
+    // Keep real newlines in query
+    const qf = (f.query || '').replace(/\r/g,'');
+    kv.push('  query="\n' + escapeQuotes(qf) + '\n  ";');
+    push('valueField', f.valueField || '');
+    push('textField', f.textField || '');
+    push('default', f.default || '');
+    push('placeholder', f.placeholder || '');
+    if (f.required) kv.push('  required="true";');
+    return `{{\n${kv.join('\n')}\n}}`;
+  }
   function generateThtml(){
     const newChart = buildChartBlock();
+    const newFilters = (filters && filters.length) ? filters.map(buildFilterBlock).join('\n\n') : '';
 
     // 1) Update or insert meta comment lines from inputs
     const setMeta = (src, key, value) => {
@@ -303,16 +496,18 @@ ${fmt.length ? fmt.join(',\n') : '    '}
     // Ensure a blank line between meta block and first component
     withMeta = withMeta.replace(/^(<!--[^]*?-->)\s*(?=\{\{|$)/, (m)=> m.replace(/\s*$/, '\n\n'));
 
-    // 2) Replace or append chart block
-    let final;
-    if (originalBlocks.length === 0) {
-      final = withMeta + (withMeta.trim() ? (withMeta.endsWith('\n')?'':'\n') : '') + newChart;
-    } else if (chartBlockIndex >= 0) {
-      final = withMeta.replace(originalBlocks[chartBlockIndex].full, newChart);
-    } else {
-      final = withMeta.trim(); if (final && !/\n$/.test(final)) final += '\n\n';
-      final += newChart;
+    // 2) Remove existing filter and chart blocks, then insert new filters + chart
+    let final = withMeta;
+    // Remove filter blocks
+    originalBlocks.filter(b => b.isFilter).forEach(b => { final = final.replace(b.full, ''); });
+    // Remove existing chart (we will append a fresh one)
+    if (chartBlockIndex >= 0) {
+      final = final.replace(originalBlocks[chartBlockIndex].full, '');
     }
+    final = final.trimEnd();
+    if (final.length) final += '\n\n';
+    if (newFilters) final += newFilters + '\n\n';
+    final += newChart;
     return final;
   }
 
@@ -325,7 +520,7 @@ ${fmt.length ? fmt.join(',\n') : '    '}
     const prevDoc = framePrev.contentDocument || framePrev.contentWindow?.document;
     const formVals = {};
     if (prevDoc && prevDoc.body){
-      prevDoc.querySelectorAll('.filter-dropdown').forEach(el => {
+      prevDoc.querySelectorAll('.filter-control').forEach(el => {
         if (el.name) formVals[el.name] = el.value;
       });
     }
@@ -403,7 +598,7 @@ ${fmt.length ? fmt.join(',\n') : '    '}
           activate('metric');
 
           // Auto-refresh on filter change (inside Metric pane)
-          Array.from(paneMetric.querySelectorAll('.filter-dropdown')).forEach(el => {
+          Array.from(paneMetric.querySelectorAll('.filter-control')).forEach(el => {
             el.addEventListener('change', () => {
               // jelezzünk a szülőnek
               try { frame.contentWindow.parent.postMessage({ type: 'metric-editor-filter-change' }, '*'); } catch(e) { /* no-op */ }
@@ -549,4 +744,9 @@ ${fmt.length ? fmt.join(',\n') : '    '}
         #sqlQuery { flex: 1 1 auto; width: 100%; height: 100%; min-height: 0; box-sizing: border-box; }
     </style>
 }
+
+
+
+
+
 

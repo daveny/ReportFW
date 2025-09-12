@@ -327,6 +327,9 @@ namespace Core.Helpers
 
             instructions.TryGetValue("default", out string defaultValue);
 
+            instructions.TryGetValue("type", out string filterType);
+            filterType = (filterType ?? "dropdown").ToLowerInvariant();
+
             instructions.TryGetValue("valueField", out string valueField);
             if (string.IsNullOrEmpty(valueField) && data.Columns.Count > 0) valueField = data.Columns[0].ColumnName;
 
@@ -337,34 +340,64 @@ namespace Core.Helpers
             requestParameters.TryGetValue(paramName, out string currentValue);
             if (string.IsNullOrEmpty(currentValue)) currentValue = defaultValue;
 
-
-            if (data.Columns.Count > 0 && (!data.Columns.Contains(valueField) || !data.Columns.Contains(textField)))
+            // Dropdown type: build <select> from data rows
+            if (filterType == "dropdown")
             {
-                return $"<div class='alert alert-danger'>Error: Invalid valueField ('{valueField}') or textField ('{textField}') for filter.</div>";
+                if (data.Columns.Count > 0 && (!data.Columns.Contains(valueField) || !data.Columns.Contains(textField)))
+                {
+                    return $"<div class='alert alert-danger'>Error: Invalid valueField ('{valueField}') or textField ('{textField}') for filter.</div>";
+                }
+
+                var optionsHtml = new System.Text.StringBuilder();
+                if (!instructions.ContainsKey("required"))
+                {
+                    string selected = string.IsNullOrEmpty(currentValue) ? " selected" : "";
+                    optionsHtml.Append($"<option value=''{selected}>-- Select --</option>");
+                }
+
+                foreach (DataRow row in data.Rows)
+                {
+                    string value = row[valueField].ToString();
+                    string text = row[textField].ToString();
+                    string selected = (value == currentValue) ? " selected" : "";
+                    optionsHtml.Append($"<option value='{HttpUtility.HtmlEncode(value)}'{selected}>{HttpUtility.HtmlEncode(text)}</option>");
+                }
+
+                var requiredAttr = instructions.ContainsKey("required") ? " required" : string.Empty;
+                return $@"
+                    <div class='filter-component mb-3'>
+                        <label for='{id}' class='form-label'>{label}</label>
+                        <select id='{id}' name='{paramName}' class='form-select filter-control filter-dropdown'{requiredAttr}>
+                            {optionsHtml}
+                        </select>
+                    </div>";
             }
 
-            var optionsHtml = new System.Text.StringBuilder();
-            if (!instructions.ContainsKey("required"))
+            // Freestyle text input
+            if (filterType == "text" || filterType == "freetext")
             {
-                string selected = string.IsNullOrEmpty(currentValue) ? " selected" : "";
-                optionsHtml.Append($"<option value=''{selected}>-- Select --</option>");
+                instructions.TryGetValue("placeholder", out string placeholder);
+                var requiredAttr = instructions.ContainsKey("required") ? " required" : string.Empty;
+                return $@"
+                    <div class='filter-component mb-3'>
+                        <label for='{id}' class='form-label'>{label}</label>
+                        <input id='{id}' name='{paramName}' type='text' class='form-control filter-control' value='{HttpUtility.HtmlEncode(currentValue ?? string.Empty)}' placeholder='{HttpUtility.HtmlEncode(placeholder ?? string.Empty)}'{requiredAttr} />
+                    </div>";
             }
 
-            foreach (DataRow row in data.Rows)
+            // Date picker
+            if (filterType == "datepicker" || filterType == "date")
             {
-                string value = row[valueField].ToString();
-                string text = row[textField].ToString();
-                string selected = (value == currentValue) ? " selected" : "";
-                optionsHtml.Append($"<option value='{HttpUtility.HtmlEncode(value)}'{selected}>{HttpUtility.HtmlEncode(text)}</option>");
+                instructions.TryGetValue("placeholder", out string placeholder);
+                var requiredAttr = instructions.ContainsKey("required") ? " required" : string.Empty;
+                return $@"
+                    <div class='filter-component mb-3'>
+                        <label for='{id}' class='form-label'>{label}</label>
+                        <input id='{id}' name='{paramName}' type='date' class='form-control filter-control' value='{HttpUtility.HtmlEncode(currentValue ?? string.Empty)}' placeholder='{HttpUtility.HtmlEncode(placeholder ?? string.Empty)}'{requiredAttr} />
+                    </div>";
             }
 
-            return $@"
-                <div class='filter-component mb-3'>
-                    <label for='{id}' class='form-label'>{label}</label>
-                    <select id='{id}' name='{paramName}' class='form-select filter-dropdown'>
-                        {optionsHtml}
-                    </select>
-                </div>";
+            return $"<div class='alert alert-warning'>Unknown filter type: '{HttpUtility.HtmlEncode(filterType)}'</div>";
         }
 
         public string RenderFilterComponent(Dictionary<string, string> instructions)
