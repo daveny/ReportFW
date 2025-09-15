@@ -104,6 +104,35 @@
                         <label class="form-label">Csoportosítás (groupBy)</label>
                         <input id="groupBy" class="form-control" placeholder="CountryRegionCode" />
                     </div>
+                    <div class="col-12">
+                        <hr />
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="pivotEnabled">
+                            <label class="form-check-label" for="pivotEnabled">Pivot engedélyezése</label>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">pivotRow</label>
+                        <input id="pivotRow" class="form-control" placeholder="CountryRegionCode" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">pivotCol</label>
+                        <input id="pivotCol" class="form-control" placeholder="OrderYear" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">pivotValue</label>
+                        <input id="pivotValue" class="form-control" placeholder="TotalSales" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">pivotAgg</label>
+                        <select id="pivotAgg" class="form-select">
+                            <option value="sum" selected>sum</option>
+                            <option value="count">count</option>
+                            <option value="avg">avg</option>
+                            <option value="min">min</option>
+                            <option value="max">max</option>
+                        </select>
+                    </div>
                 </div>
             </div>
             <div class="card mb-3">
@@ -163,6 +192,12 @@
   const series = document.getElementById('series');
   const legends = document.getElementById('legends');
   const groupBy = document.getElementById('groupBy');
+  // Pivot controls
+  const pivotEnabled = document.getElementById('pivotEnabled');
+  const pivotRow = document.getElementById('pivotRow');
+  const pivotCol = document.getElementById('pivotCol');
+  const pivotValue = document.getElementById('pivotValue');
+  const pivotAgg = document.getElementById('pivotAgg');
   const title = document.getElementById('title');
   const valueColorPairs = document.getElementById('valueColorPairs');
   const btnAddColorPair = document.getElementById('btnAddColorPair');
@@ -436,6 +471,17 @@
         const k = tok.replace(/^[\s\n]+/,'').replace(/\s*;\s*$/,'');
         if (/^pivot/i.test(k) && !(k in extraChartProps)) extraChartProps[k] = 'true';
       });
+
+      // Populate Pivot UI from preserved props
+      const pr = extraChartProps['pivotRow'] || '';
+      const pc = extraChartProps['pivotCol'] || '';
+      const pv = extraChartProps['pivotValue'] || '';
+      const pa = extraChartProps['pivotAgg'] || '';
+      if (pivotRow) pivotRow.value = pr;
+      if (pivotCol) pivotCol.value = pc;
+      if (pivotValue) pivotValue.value = pv;
+      if (pa && pivotAgg) pivotAgg.value = pa;
+      if (pivotEnabled) pivotEnabled.checked = !!(pr && pc);
     }
 
     if(!success) {
@@ -456,6 +502,20 @@
     const rep = (representation.value || '').trim() || 'barchart';
     // Tartsuk meg a valós sortöréseket, ne tegyünk \n-t
     const q = (sqlQuery.value || '').replace(/\r/g,'');
+
+    // Update extraChartProps from Pivot UI
+    if (pivotEnabled && pivotEnabled.checked){
+      if (!extraChartProps) extraChartProps = {};
+      extraChartProps['pivotRow'] = (pivotRow?.value||'').trim();
+      extraChartProps['pivotCol'] = (pivotCol?.value||'').trim();
+      extraChartProps['pivotValue'] = (pivotValue?.value||'').trim();
+      extraChartProps['pivotAgg'] = ((pivotAgg?.value)||'sum').trim() || 'sum';
+    } else if (extraChartProps) {
+      delete extraChartProps['pivotRow'];
+      delete extraChartProps['pivotCol'];
+      delete extraChartProps['pivotValue'];
+      delete extraChartProps['pivotAgg'];
+    }
 
     // Emit extra chart properties that we preserved (e.g., pivot*)
     const extra = [];
