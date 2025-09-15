@@ -6,21 +6,17 @@ namespace Core.Helpers
 {
     public static class FormatParser
     {
-        public static FormatOptions ParseFormattingOptions(string formattingString)
+                public static FormatOptions ParseFormattingOptions(string formattingString)
         {
-            FormatOptions options = new FormatOptions();
-
-            if (string.IsNullOrWhiteSpace(formattingString))
-                return options;
-
+            var options = new FormatOptions();
+            if (string.IsNullOrWhiteSpace(formattingString)) return options;
             try
             {
                 formattingString = formattingString.Trim();
                 if (formattingString.StartsWith("{") && formattingString.EndsWith("}"))
-                {
                     formattingString = formattingString.Substring(1, formattingString.Length - 2);
-                }
 
+                // Existing simple patterns
                 if (formattingString.Contains("row:"))
                 {
                     int rowStart = formattingString.IndexOf("row:") + 4;
@@ -29,28 +25,18 @@ namespace Core.Helpers
                     {
                         string rowOptions = formattingString.Substring(rowStart, rowEnd - rowStart).Trim();
                         int indexStart = rowOptions.IndexOf("index:") + 6;
-                        int indexEnd = rowOptions.IndexOf(",", indexStart);
-                        if (indexEnd == -1) indexEnd = rowOptions.Length;
+                        int indexEnd = rowOptions.IndexOf(",", indexStart); if (indexEnd == -1) indexEnd = rowOptions.Length;
                         int styleStart = rowOptions.IndexOf("style:") + 6;
-                        int styleEnd = rowOptions.IndexOf(",", styleStart);
-                        if (styleEnd == -1) styleEnd = rowOptions.Length;
-
-                        if (indexStart > 6 && indexEnd > indexStart &&
-                            styleStart > 6 && styleEnd > styleStart)
+                        int styleEnd = rowOptions.IndexOf(",", styleStart); if (styleEnd == -1) styleEnd = rowOptions.Length;
+                        if (indexStart > 6 && indexEnd > indexStart && styleStart > 6 && styleEnd > styleStart)
                         {
                             string indexStr = rowOptions.Substring(indexStart, indexEnd - indexStart).Trim();
                             string styleStr = rowOptions.Substring(styleStart, styleEnd - styleStart).Trim();
-                            if (styleStr.StartsWith("\"") && styleStr.EndsWith("\""))
-                                styleStr = styleStr.Substring(1, styleStr.Length - 2);
-                            options.RowPattern = new RowPatternOptions
-                            {
-                                Index = int.Parse(indexStr),
-                                Style = styleStr
-                            };
+                            if (styleStr.StartsWith("\"") && styleStr.EndsWith("\"")) styleStr = styleStr.Substring(1, styleStr.Length - 2);
+                            options.RowPattern = new RowPatternOptions { Index = int.Parse(indexStr), Style = styleStr };
                         }
                     }
                 }
-
                 if (formattingString.Contains("column:"))
                 {
                     int colStart = formattingString.IndexOf("column:") + 7;
@@ -59,30 +45,21 @@ namespace Core.Helpers
                     {
                         string colOptions = formattingString.Substring(colStart, colEnd - colStart).Trim();
                         int nameStart = colOptions.IndexOf("nameContains:") + 13;
-                        int nameEnd = colOptions.IndexOf(",", nameStart);
-                        if (nameEnd == -1) nameEnd = colOptions.Length;
+                        int nameEnd = colOptions.IndexOf(",", nameStart); if (nameEnd == -1) nameEnd = colOptions.Length;
                         int styleStart = colOptions.IndexOf("style:") + 6;
-                        int styleEnd = colOptions.IndexOf(",", styleStart);
-                        if (styleEnd == -1) styleEnd = colOptions.Length;
-
-                        if (nameStart > 13 && nameEnd > nameStart &&
-                            styleStart > 6 && styleEnd > styleStart)
+                        int styleEnd = colOptions.IndexOf(",", styleStart); if (styleEnd == -1) styleEnd = colOptions.Length;
+                        if (nameStart > 13 && nameEnd > nameStart && styleStart > 6 && styleEnd > styleStart)
                         {
                             string nameStr = colOptions.Substring(nameStart, nameEnd - nameStart).Trim();
                             string styleStr = colOptions.Substring(styleStart, styleEnd - styleStart).Trim();
-                            if (nameStr.StartsWith("\"") && nameStr.EndsWith("\""))
-                                nameStr = nameStr.Substring(1, nameStr.Length - 2);
-                            if (styleStr.StartsWith("\"") && styleStr.EndsWith("\""))
-                                styleStr = styleStr.Substring(1, styleStr.Length - 2);
-                            options.ColumnPattern = new ColumnPatternOptions
-                            {
-                                NameContains = nameStr,
-                                Style = styleStr
-                            };
+                            if (nameStr.StartsWith("\"") && nameStr.EndsWith("\"")) nameStr = nameStr.Substring(1, nameStr.Length - 2);
+                            if (styleStr.StartsWith("\"") && styleStr.EndsWith("\"")) styleStr = styleStr.Substring(1, styleStr.Length - 2);
+                            options.ColumnPattern = new ColumnPatternOptions { NameContains = nameStr, Style = styleStr };
                         }
                     }
                 }
-                // RowStyles: formatting={ rowStyles: [{ match: "Total", style: "font-weight:bold" }, ...] }
+
+                // New: rowStyles
                 var rowStylesMatch = Regex.Match(formattingString, @"rowStyles\s*:\s*\[([\s\S]*?)\]", RegexOptions.IgnoreCase);
                 if (rowStylesMatch.Success)
                 {
@@ -91,17 +68,14 @@ namespace Core.Helpers
                     foreach (Match m in Regex.Matches(body, @"\{([\s\S]*?)\}"))
                     {
                         var obj = m.Groups[1].Value;
-                        var mm = Regex.Match(obj, @"match\s*:\s*['\"]([\s\S]*?)['\"]", RegexOptions.IgnoreCase);
-                        var st = Regex.Match(obj, @"style\s*:\s*['\"]([\s\S]*?)['\"]", RegexOptions.IgnoreCase);
-                        if (mm.Success && st.Success)
-                        {
-                            list.Add(new RowStyleRule { Match = mm.Groups[1].Value, Style = st.Groups[1].Value });
-                        }
+                        var mm = Regex.Match(obj, @"match\s*:\s*['""]([\s\S]*?)['""]", RegexOptions.IgnoreCase);
+                        var st = Regex.Match(obj, @"style\s*:\s*['""]([\s\S]*?)['""]", RegexOptions.IgnoreCase);
+                        if (mm.Success && st.Success) list.Add(new RowStyleRule { Match = mm.Groups[1].Value, Style = st.Groups[1].Value });
                     }
                     if (list.Count > 0) options.RowStyles = list;
                 }
 
-                // ColStyles: formatting={ colStyles: [{ match: "201", style: "background:#eef" }] }
+                // New: colStyles
                 var colStylesMatch = Regex.Match(formattingString, @"colStyles\s*:\s*\[([\s\S]*?)\]", RegexOptions.IgnoreCase);
                 if (colStylesMatch.Success)
                 {
@@ -110,23 +84,20 @@ namespace Core.Helpers
                     foreach (Match m in Regex.Matches(body, @"\{([\s\S]*?)\}"))
                     {
                         var obj = m.Groups[1].Value;
-                        var mm = Regex.Match(obj, @"match\s*:\s*['\"]([\s\S]*?)['\"]", RegexOptions.IgnoreCase);
-                        var st = Regex.Match(obj, @"style\s*:\s*['\"]([\s\S]*?)['\"]", RegexOptions.IgnoreCase);
-                        if (mm.Success && st.Success)
-                        {
-                            list.Add(new ColStyleRule { Match = mm.Groups[1].Value, Style = st.Groups[1].Value });
-                        }
+                        var mm = Regex.Match(obj, @"match\s*:\s*['""]([\s\S]*?)['""]", RegexOptions.IgnoreCase);
+                        var st = Regex.Match(obj, @"style\s*:\s*['""]([\s\S]*?)['""]", RegexOptions.IgnoreCase);
+                        if (mm.Success && st.Success) list.Add(new ColStyleRule { Match = mm.Groups[1].Value, Style = st.Groups[1].Value });
                     }
                     if (list.Count > 0) options.ColStyles = list;
                 }
 
-                // Cell colors (thresholds): formatting={ cellColor: { mode:"thresholds", columns:"pivot", rules:[{ gte: 1000, style:"background:#fee" }] } }
+                // New: cellColor thresholds
                 var cellMatch = Regex.Match(formattingString, @"cellColor\s*:\s*\{([\s\S]*?)\}", RegexOptions.IgnoreCase);
                 if (cellMatch.Success)
                 {
                     var obj = cellMatch.Groups[1].Value;
-                    var mode = Regex.Match(obj, @"mode\s*:\s*['\"]([\w-]+)['\"]", RegexOptions.IgnoreCase).Groups[1]?.Value;
-                    var cols = Regex.Match(obj, @"columns\s*:\s*['\"]([\w-]+)['\"]", RegexOptions.IgnoreCase).Groups[1]?.Value;
+                    var mode = Regex.Match(obj, @"mode\s*:\s*['""]([\w-]+)['""]", RegexOptions.IgnoreCase).Groups[1]?.Value;
+                    var cols = Regex.Match(obj, @"columns\s*:\s*['""]([\w-]+)['""]", RegexOptions.IgnoreCase).Groups[1]?.Value;
                     var rulesPart = Regex.Match(obj, @"rules\s*:\s*\[([\s\S]*?)\]", RegexOptions.IgnoreCase).Groups[1]?.Value;
                     var rules = new List<CellThresholdRule>();
                     if (!string.IsNullOrEmpty(rulesPart))
@@ -134,26 +105,19 @@ namespace Core.Helpers
                         foreach (Match rm in Regex.Matches(rulesPart, @"\{([\s\S]*?)\}"))
                         {
                             var robj = rm.Groups[1].Value;
-                            double val;
-                            double? gte = null, lt = null;
+                            double val; double? gte = null, lt = null;
                             if (double.TryParse(Regex.Match(robj, @"gte\s*:\s*([\-\d\.]+)").Groups[1].Value, out val)) gte = val;
                             if (double.TryParse(Regex.Match(robj, @"lt\s*:\s*([\-\d\.]+)").Groups[1].Value, out val)) lt = val;
-                            var style = Regex.Match(robj, @"style\s*:\s*['\"]([\s\S]*?)['\"]", RegexOptions.IgnoreCase).Groups[1].Value;
+                            var style = Regex.Match(robj, @"style\s*:\s*['""]([\s\S]*?)['""]", RegexOptions.IgnoreCase).Groups[1].Value;
                             if (!string.IsNullOrEmpty(style)) rules.Add(new CellThresholdRule { Gte = gte, Lt = lt, Style = style });
                         }
                     }
                     options.CellColors = new CellColorOptions { Mode = string.IsNullOrEmpty(mode)?"thresholds":mode, Columns = string.IsNullOrEmpty(cols)?"pivot":cols, Thresholds = rules };
                 }
             }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error parsing formatting options: {ex.Message}");
-            }
-
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine("Error parsing formatting options: " + ex.Message); }
             return options;
-        }
-
-        private static Dictionary<string, string> ParseValueColors(string formattingStr)
+        }private static Dictionary<string, string> ParseValueColors(string formattingStr)
         {
             var valueColors = new Dictionary<string, string>();
             var match = Regex.Match(formattingStr, @"valueColors\s*:\s*\{([^}]+)\}");
@@ -512,3 +476,5 @@ namespace Core.Helpers
         }
     }
 }
+
+
