@@ -286,6 +286,7 @@
       <Project>{b9ee7236-606f-42e9-8e5a-6ab0b661c08c}</Project>
       <Name>Core</Name>
     </ProjectReference>
+    <Content Include="Views\Metrics\Templates\metric01_pivot.thtml" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>

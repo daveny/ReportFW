@@ -1,0 +1,47 @@
+<!-- meta-name: Sales Pivot -->
+<!-- meta-description: Pivot table of TotalSales by Country and Year (filterable). -->
+<!-- meta-owner: Team -->
+
+{{
+  representation="filter";
+  type="dropdown";
+  param="Country";
+  label="Country:";
+  query="SELECT DISTINCT CountryRegionCode FROM Sales.SalesTerritory WHERE CountryRegionCode IN ('FR', 'DE', 'CA', 'AU')";
+  valueField="CountryRegionCode";
+  textField="CountryRegionCode";
+}}
+
+{{
+  query="
+    SELECT
+        YEAR(soh.OrderDate) as OrderYear,
+        st.CountryRegionCode,
+        SUM(sod.LineTotal) as TotalSales
+    FROM
+        [Sales].SalesOrderDetail sod
+    INNER JOIN
+        Sales.SalesOrderHeader soh ON sod.SalesOrderID = soh.SalesOrderID
+    INNER JOIN
+        Sales.SalesTerritory st ON st.TerritoryID = soh.TerritoryID
+    WHERE
+        st.CountryRegionCode IN ('FR', 'DE', 'CA', 'AU')
+        AND (@Country IS NULL OR st.CountryRegionCode = @Country)
+    GROUP BY
+        YEAR(soh.OrderDate),
+        st.CountryRegionCode
+    ORDER BY
+        OrderYear, CountryRegionCode
+  ";
+  representation="table";
+  pivotRow="CountryRegionCode";
+  pivotCol="OrderYear";
+  pivotValue="TotalSales";
+  pivotAgg="sum";
+  pivotShowRowTotal="true";
+  pivotShowColTotal="true";
+  pivotShowGrandTotal="true";
+  formatting={
+    title: "Sales by Country x Year (Pivot)"
+  }
+}}

@@ -23,11 +23,19 @@ namespace Core.Helpers
                 instructions.TryGetValue("pivotCol", out string pivotCol);
                 instructions.TryGetValue("pivotValue", out string pivotValue);
                 instructions.TryGetValue("pivotAgg", out string pivotAgg);
+                // Resolve columns case-insensitively to avoid typos in casing
+                Func<string, string> resolve = (name) =>
+                    string.IsNullOrWhiteSpace(name) ? name :
+                    (data?.Columns.Cast<DataColumn>()
+                        .FirstOrDefault(c => c.ColumnName.Equals(name, StringComparison.OrdinalIgnoreCase))?.ColumnName ?? name);
+                pivotRow = resolve(pivotRow);
+                pivotCol = resolve(pivotCol);
+                if (!string.IsNullOrWhiteSpace(pivotValue)) pivotValue = resolve(pivotValue);
                 // Fallbacks: if pivotRow/pivotValue not provided, use groupBy/series
                 if (string.IsNullOrWhiteSpace(pivotRow))
                 {
                     if (instructions.TryGetValue("groupBy", out string gb) && !string.IsNullOrWhiteSpace(gb))
-                        pivotRow = gb;
+                        pivotRow = resolve(gb);
                 }
                 if (string.IsNullOrWhiteSpace(pivotValue))
                 {
@@ -36,7 +44,7 @@ namespace Core.Helpers
                         if (instructions.TryGetValue("series", out string seriesVal) && !string.IsNullOrWhiteSpace(seriesVal))
                         {
                             var firstSeries = seriesVal.Split(',').Select(s => s.Trim()).FirstOrDefault();
-                            if (!string.IsNullOrWhiteSpace(firstSeries)) pivotValue = firstSeries;
+                            if (!string.IsNullOrWhiteSpace(firstSeries)) pivotValue = resolve(firstSeries);
                         }
                     }
                 }
@@ -46,6 +54,12 @@ namespace Core.Helpers
                     pivotAgg = string.IsNullOrWhiteSpace(pivotAgg) ? "sum" : pivotAgg;
                     try
                     {
+                        try
+                        {
+                            var beforeCols = string.Join(", ", data.Columns.Cast<DataColumn>().Select(c => c.ColumnName));
+                            DebugHelper.Log($"[Pivot] row='{pivotRow}' col='{pivotCol}' val='{pivotValue}' agg='{pivotAgg}' cols=[{beforeCols}] rows={data.Rows.Count}");
+                        }
+                        catch { }
                         var cfg = new PivotConfig
                         {
                             ShowRowTotal = instructions.ContainsKey("pivotShowRowTotal"),
@@ -59,9 +73,16 @@ namespace Core.Helpers
                             RowDesc = instructions.ContainsKey("pivotRowDir") && instructions["pivotRowDir"].Equals("desc", StringComparison.OrdinalIgnoreCase)
                         };
                         data = PivotHelper.Pivot(data, pivotRow, pivotCol, pivotValue, pivotAgg, cfg);
+                        try
+                        {
+                            var afterCols = string.Join(", ", data.Columns.Cast<DataColumn>().Select(c => c.ColumnName));
+                            DebugHelper.Log($"[Pivot OK] newCols=[{afterCols}] newRows={data.Rows.Count}");
+                        }
+                        catch { }
                     }
                     catch (Exception ex)
                     {
+                        try { DebugHelper.Log("[Pivot ERROR] " + ex.Message); } catch { }
                         return "<div class='alert alert-danger'>Pivot error: " + System.Web.HttpUtility.HtmlEncode(ex.Message) + "</div>";
                     }
                 }

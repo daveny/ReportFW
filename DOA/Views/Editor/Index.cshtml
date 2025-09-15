@@ -142,6 +142,8 @@
   let originalThml = '';
   let originalBlocks = [];
   let chartBlockIndex = -1;
+  // Preserve additional chart properties (e.g., pivot*) that the UI doesn't explicitly edit
+  let extraChartProps = {};
 
   const ddlFiles = document.getElementById('ddlFiles');
   const btnLoad = document.getElementById('btnLoad');
@@ -419,6 +421,21 @@
           if (m) addValueColorPair(m[1], m[2]);
         });
       }
+
+      // Collect and preserve pivot* and other unknown chart props (key="value"; form)
+      extraChartProps = {};
+      const kv = chartInner.match(/\b(\w+)\s*=\s*(["'])([\s\S]*?)\2\s*;?/gi) || [];
+      kv.forEach(pair => {
+        const m = pair.match(/\b(\w+)\s*=\s*(["'])([\s\S]*?)\2\s*;?/i);
+        if (!m) return;
+        const k = m[1]; const v = m[3];
+        if (/^pivot/i.test(k)) extraChartProps[k] = v;
+      });
+      // Also handle bare flags like: pivotShowRowTotal;
+      (chartInner.match(/(^|\s)(pivot\w+)\s*;/gi) || []).forEach(tok => {
+        const k = tok.replace(/^[\s\n]+/,'').replace(/\s*;\s*$/,'');
+        if (/^pivot/i.test(k) && !(k in extraChartProps)) extraChartProps[k] = 'true';
+      });
     }
 
     if(!success) {
@@ -440,6 +457,13 @@
     // Tartsuk meg a valós sortöréseket, ne tegyünk \n-t
     const q = (sqlQuery.value || '').replace(/\r/g,'');
 
+    // Emit extra chart properties that we preserved (e.g., pivot*)
+    const extra = [];
+    Object.keys(extraChartProps || {}).forEach(k => {
+      const v = extraChartProps[k];
+      if (v != null && String(v).length) extra.push('  '+k+'="'+escapeQuotes(String(v))+'";');
+    });
+
     return `{{
   query="
 ${escapeQuotes(q)}
@@ -448,6 +472,7 @@ ${escapeQuotes(q)}
   series="${(series.value||'').trim()}";
   legends="${(legends.value||'').trim()}";
   groupBy="${(groupBy.value||'').trim()}";
+${extra.length ? extra.join('\n') : ''}
   formatting={
 ${fmt.length ? fmt.join(',\n') : '    '}
   }
