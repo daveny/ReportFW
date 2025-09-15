@@ -450,3 +450,65 @@ namespace Core.Helpers
         }
     }
 }
+                // RowStyles: formatting={ rowStyles: [{ match: "Total", style: "font-weight:bold" }, ...] }
+                var rowStylesMatch = Regex.Match(formattingString, @"rowStyles\s*:\s*\[([\s\S]*?)\]", RegexOptions.IgnoreCase);
+                if (rowStylesMatch.Success)
+                {
+                    var list = new List<RowStyleRule>();
+                    var body = rowStylesMatch.Groups[1].Value;
+                    foreach (Match m in Regex.Matches(body, @"\{([\s\S]*?)\}"))
+                    {
+                        var obj = m.Groups[1].Value;
+                        var mm = Regex.Match(obj, @"match\s*:\s*['\"]([\s\S]*?)['\"]", RegexOptions.IgnoreCase);
+                        var st = Regex.Match(obj, @"style\s*:\s*['\"]([\s\S]*?)['\"]", RegexOptions.IgnoreCase);
+                        if (mm.Success && st.Success)
+                        {
+                            list.Add(new RowStyleRule { Match = mm.Groups[1].Value, Style = st.Groups[1].Value });
+                        }
+                    }
+                    if (list.Count > 0) options.RowStyles = list;
+                }
+
+                // ColStyles: formatting={ colStyles: [{ match: "201", style: "background:#eef" }] }
+                var colStylesMatch = Regex.Match(formattingString, @"colStyles\s*:\s*\[([\s\S]*?)\]", RegexOptions.IgnoreCase);
+                if (colStylesMatch.Success)
+                {
+                    var list = new List<ColStyleRule>();
+                    var body = colStylesMatch.Groups[1].Value;
+                    foreach (Match m in Regex.Matches(body, @"\{([\s\S]*?)\}"))
+                    {
+                        var obj = m.Groups[1].Value;
+                        var mm = Regex.Match(obj, @"match\s*:\s*['\"]([\s\S]*?)['\"]", RegexOptions.IgnoreCase);
+                        var st = Regex.Match(obj, @"style\s*:\s*['\"]([\s\S]*?)['\"]", RegexOptions.IgnoreCase);
+                        if (mm.Success && st.Success)
+                        {
+                            list.Add(new ColStyleRule { Match = mm.Groups[1].Value, Style = st.Groups[1].Value });
+                        }
+                    }
+                    if (list.Count > 0) options.ColStyles = list;
+                }
+
+                // Cell colors (thresholds): formatting={ cellColor: { mode:"thresholds", columns:"pivot", rules:[{ gte: 1000, style:"background:#fee" }] } }
+                var cellMatch = Regex.Match(formattingString, @"cellColor\s*:\s*\{([\s\S]*?)\}", RegexOptions.IgnoreCase);
+                if (cellMatch.Success)
+                {
+                    var obj = cellMatch.Groups[1].Value;
+                    var mode = Regex.Match(obj, @"mode\s*:\s*['\"]([\w-]+)['\"]", RegexOptions.IgnoreCase).Groups[1]?.Value;
+                    var cols = Regex.Match(obj, @"columns\s*:\s*['\"]([\w-]+)['\"]", RegexOptions.IgnoreCase).Groups[1]?.Value;
+                    var rulesPart = Regex.Match(obj, @"rules\s*:\s*\[([\s\S]*?)\]", RegexOptions.IgnoreCase).Groups[1]?.Value;
+                    var rules = new List<CellThresholdRule>();
+                    if (!string.IsNullOrEmpty(rulesPart))
+                    {
+                        foreach (Match rm in Regex.Matches(rulesPart, @"\{([\s\S]*?)\}"))
+                        {
+                            var robj = rm.Groups[1].Value;
+                            double val;
+                            double? gte = null, lt = null;
+                            if (double.TryParse(Regex.Match(robj, @"gte\s*:\s*([\-\d\.]+)").Groups[1].Value, out val)) gte = val;
+                            if (double.TryParse(Regex.Match(robj, @"lt\s*:\s*([\-\d\.]+)").Groups[1].Value, out val)) lt = val;
+                            var style = Regex.Match(robj, @"style\s*:\s*['\"]([\s\S]*?)['\"]", RegexOptions.IgnoreCase).Groups[1].Value;
+                            if (!string.IsNullOrEmpty(style)) rules.Add(new CellThresholdRule { Gte = gte, Lt = lt, Style = style });
+                        }
+                    }
+                    options.CellColors = new CellColorOptions { Mode = string.IsNullOrEmpty(mode)?"thresholds":mode, Columns = string.IsNullOrEmpty(cols)?"pivot":cols, Thresholds = rules };
+                }

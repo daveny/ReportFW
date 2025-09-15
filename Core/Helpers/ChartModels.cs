@@ -14,6 +14,9 @@ namespace Core.Helpers
     {
         public RowPatternOptions RowPattern { get; set; }
         public ColumnPatternOptions ColumnPattern { get; set; }
+        public List<RowStyleRule> RowStyles { get; set; }
+        public List<ColStyleRule> ColStyles { get; set; }
+        public CellColorOptions CellColors { get; set; }
     }
 
     public class RowPatternOptions
@@ -26,6 +29,32 @@ namespace Core.Helpers
     {
         public string NameContains { get; set; }  // Apply style to columns with names containing this string
         public string Style { get; set; }
+    }
+
+    public class RowStyleRule
+    {
+        public string Match { get; set; } // substring match on first column value
+        public string Style { get; set; }
+    }
+
+    public class ColStyleRule
+    {
+        public string Match { get; set; } // substring match on column header
+        public string Style { get; set; }
+    }
+
+    public class CellThresholdRule
+    {
+        public double? Gte { get; set; }
+        public double? Lt { get; set; }
+        public string Style { get; set; }
+    }
+
+    public class CellColorOptions
+    {
+        public string Mode { get; set; } // "thresholds" (supported now)
+        public string Columns { get; set; } // "pivot" to skip first column in pivot, or "all"
+        public List<CellThresholdRule> Thresholds { get; set; }
     }
 
     public class BarChartOptions : ChartOptions

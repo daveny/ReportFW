@@ -92,6 +92,8 @@ namespace Core.Helpers
             string html = $"<table id='{tableId}' class='display' style='width:100%'><thead><tr>";
 
             // Add table headers
+            // Precompute column style map from formatting options and rules
+            var columnStyles = new Dictionary<int, string>();
             foreach (DataColumn column in data.Columns)
             {
                 string headerStyle = "";
@@ -99,6 +101,17 @@ namespace Core.Helpers
                     column.ColumnName.Contains(formatOptions.ColumnPattern.NameContains))
                 {
                     headerStyle = $" style='{formatOptions.ColumnPattern.Style}'";
+                }
+                if (formatOptions.ColStyles != null)
+                {
+                    foreach (var rule in formatOptions.ColStyles)
+                    {
+                        if (!string.IsNullOrEmpty(rule?.Match) && column.ColumnName.IndexOf(rule.Match, StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            if (string.IsNullOrEmpty(headerStyle)) headerStyle = $" style='{rule.Style}'";
+                            columnStyles[column.Ordinal] = rule.Style;
+                        }
+                    }
                 }
 
                 html += $"<th{headerStyle}>{column.ColumnName}</th>";
@@ -117,6 +130,18 @@ namespace Core.Helpers
                 {
                     rowStyle = $" style='{formatOptions.RowPattern.Style}'";
                 }
+                if (formatOptions.RowStyles != null && data.Columns.Count > 0)
+                {
+                    var first = row[0]?.ToString() ?? string.Empty;
+                    foreach (var rr in formatOptions.RowStyles)
+                    {
+                        if (!string.IsNullOrEmpty(rr?.Match) && first.IndexOf(rr.Match, StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            if (string.IsNullOrEmpty(rowStyle)) rowStyle = $" style='{rr.Style}'";
+                            break;
+                        }
+                    }
+                }
 
                 html += $"<tr{rowStyle}>";
 
@@ -129,6 +154,33 @@ namespace Core.Helpers
                         columnName.Contains(formatOptions.ColumnPattern.NameContains))
                     {
                         cellStyle = $" style='{formatOptions.ColumnPattern.Style}'";
+                    }
+                    if (columnStyles.ContainsKey(i))
+                    {
+                        if (string.IsNullOrEmpty(cellStyle)) cellStyle = $" style='{columnStyles[i]}'";
+                    }
+
+                    // Threshold-based cell coloring (pivot or all columns)
+                    if (formatOptions.CellColors?.Mode == "thresholds" && formatOptions.CellColors.Thresholds != null)
+                    {
+                        bool pivotOnly = !string.IsNullOrEmpty(formatOptions.CellColors.Columns) && formatOptions.CellColors.Columns.Equals("pivot", StringComparison.OrdinalIgnoreCase);
+                        bool eligible = !pivotOnly || (pivotOnly && i > 0); // skip first column for pivot tables
+                        if (eligible)
+                        {
+                            double val;
+                            if (double.TryParse(Convert.ToString(row[i]), out val))
+                            {
+                                foreach (var rule in formatOptions.CellColors.Thresholds)
+                                {
+                                    if ((rule.Gte == null || val >= rule.Gte.Value) && (rule.Lt == null || val < rule.Lt.Value))
+                                    {
+                                        var style = rule.Style ?? string.Empty;
+                                        if (string.IsNullOrEmpty(cellStyle)) cellStyle = $" style='{style}'";
+                                        break;
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     html += $"<td{cellStyle}>{row.ItemArray[i]}</td>";
