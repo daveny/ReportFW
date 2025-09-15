@@ -87,7 +87,7 @@ namespace Core.Helpers
                         var mm = Regex.Match(obj, @"match\s*:\s*['""]([\s\S]*?)['""]", RegexOptions.IgnoreCase);
                         var st = Regex.Match(obj, @"style\s*:\s*['""]([\s\S]*?)['""]", RegexOptions.IgnoreCase);
                         if (mm.Success && st.Success) list.Add(new ColStyleRule { Match = mm.Groups[1].Value, Style = st.Groups[1].Value });
-                    }
+                        if (mm.Success && st.Success) { var ap = Regex.Match(obj, @"(applyTo|scope)\s*:\s*['""]([a-zA-Z]+)['""]", RegexOptions.IgnoreCase); list.Add(new ColStyleRule { Match = mm.Groups[1].Value, Style = st.Groups[1].Value, ApplyTo = ap.Success ? ap.Groups[2].Value : null }); }
                     if (list.Count > 0) options.ColStyles = list;
                 }
 

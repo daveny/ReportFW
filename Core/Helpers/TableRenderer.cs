@@ -93,8 +93,10 @@ namespace Core.Helpers
 
             // Add table headers
             // Precompute column style map from formatting options and rules
-            var columnStyles = new Dictionary<int, string>();
-            foreach (DataColumn column in data.Columns)
+            var columnCellStyles = new Dictionary<int, string>();
+            var columnHeaderStyles = new Dictionary<int, string>();
+            var columnCellStyles = new Dictionary<int, string>();
+            var columnHeaderStyles = new Dictionary<int, string>();
             {
                 string headerStyle = "";
                 if (formatOptions.ColumnPattern != null &&
@@ -108,8 +110,16 @@ namespace Core.Helpers
                     {
                         if (!string.IsNullOrEmpty(rule?.Match) && column.ColumnName.IndexOf(rule.Match, StringComparison.OrdinalIgnoreCase) >= 0)
                         {
-                            if (string.IsNullOrEmpty(headerStyle)) headerStyle = $" style='{rule.Style}'";
-                            columnStyles[column.Ordinal] = rule.Style;
+                            var scope = (rule.ApplyTo ?? "both").ToLowerInvariant();
+                            if (scope == "header" || scope == "both")
+                            {
+                                if (string.IsNullOrEmpty(headerStyle)) headerStyle = $" style='{rule.Style}'";
+                                columnHeaderStyles[column.Ordinal] = rule.Style;
+                            }
+                            if (scope == "cells" || scope == "both")
+                            {
+                                columnCellStyles[column.Ordinal] = rule.Style;
+                            }
                         }
                     }
                 }
@@ -155,9 +165,9 @@ namespace Core.Helpers
                     {
                         cellStyle = $" style='{formatOptions.ColumnPattern.Style}'";
                     }
-                    if (columnStyles.ContainsKey(i))
+                    if (columnCellStyles.ContainsKey(i))
                     {
-                        if (string.IsNullOrEmpty(cellStyle)) cellStyle = $" style='{columnStyles[i]}'";
+                        if (string.IsNullOrEmpty(cellStyle)) cellStyle = $" style='{columnCellStyles[i]}'";
                     }
 
                     // Threshold-based cell coloring (pivot or all columns)

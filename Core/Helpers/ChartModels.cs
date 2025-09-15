@@ -41,6 +41,7 @@ namespace Core.Helpers
     {
         public string Match { get; set; } // substring match on column header
         public string Style { get; set; }
+        public string ApplyTo { get; set; } // header | cells | both (default both)
     }
 
     public class CellThresholdRule
