@@ -6,7 +6,7 @@ namespace Core.Helpers
 {
     public static class FormatParser
     {
-                public static FormatOptions ParseFormattingOptions(string formattingString)
+                        public static FormatOptions ParseFormattingOptions(string formattingString)
         {
             var options = new FormatOptions();
             if (string.IsNullOrWhiteSpace(formattingString)) return options;
@@ -16,7 +16,7 @@ namespace Core.Helpers
                 if (formattingString.StartsWith("{") && formattingString.EndsWith("}"))
                     formattingString = formattingString.Substring(1, formattingString.Length - 2);
 
-                // Existing simple patterns
+                // Basic single-pattern options (existing)
                 if (formattingString.Contains("row:"))
                 {
                     int rowStart = formattingString.IndexOf("row:") + 4;
@@ -59,7 +59,7 @@ namespace Core.Helpers
                     }
                 }
 
-                // New: rowStyles
+                // rowStyles: formatting={ rowStyles: [{ match: "Total", style: "..." }] }
                 var rowStylesMatch = Regex.Match(formattingString, @"rowStyles\s*:\s*\[([\s\S]*?)\]", RegexOptions.IgnoreCase);
                 if (rowStylesMatch.Success)
                 {
@@ -70,12 +70,13 @@ namespace Core.Helpers
                         var obj = m.Groups[1].Value;
                         var mm = Regex.Match(obj, @"match\s*:\s*['""]([\s\S]*?)['""]", RegexOptions.IgnoreCase);
                         var st = Regex.Match(obj, @"style\s*:\s*['""]([\s\S]*?)['""]", RegexOptions.IgnoreCase);
-                        if (mm.Success && st.Success) list.Add(new RowStyleRule { Match = mm.Groups[1].Value, Style = st.Groups[1].Value });
+                        if (mm.Success && st.Success)
+                            list.Add(new RowStyleRule { Match = mm.Groups[1].Value, Style = st.Groups[1].Value });
                     }
                     if (list.Count > 0) options.RowStyles = list;
                 }
 
-                // New: colStyles
+                // colStyles: formatting={ colStyles: [{ match:"2011", style:"...", applyTo:"header|cells|both" }] }
                 var colStylesMatch = Regex.Match(formattingString, @"colStyles\s*:\s*\[([\s\S]*?)\]", RegexOptions.IgnoreCase);
                 if (colStylesMatch.Success)
                 {
@@ -86,12 +87,14 @@ namespace Core.Helpers
                         var obj = m.Groups[1].Value;
                         var mm = Regex.Match(obj, @"match\s*:\s*['""]([\s\S]*?)['""]", RegexOptions.IgnoreCase);
                         var st = Regex.Match(obj, @"style\s*:\s*['""]([\s\S]*?)['""]", RegexOptions.IgnoreCase);
-                        if (mm.Success && st.Success) list.Add(new ColStyleRule { Match = mm.Groups[1].Value, Style = st.Groups[1].Value });
-                        if (mm.Success && st.Success) { var ap = Regex.Match(obj, @"(applyTo|scope)\s*:\s*['""]([a-zA-Z]+)['""]", RegexOptions.IgnoreCase); list.Add(new ColStyleRule { Match = mm.Groups[1].Value, Style = st.Groups[1].Value, ApplyTo = ap.Success ? ap.Groups[2].Value : null }); }
+                        var ap = Regex.Match(obj, @"(applyTo|scope)\s*:\s*['""]([a-zA-Z]+)['""]", RegexOptions.IgnoreCase);
+                        if (mm.Success && st.Success)
+                            list.Add(new ColStyleRule { Match = mm.Groups[1].Value, Style = st.Groups[1].Value, ApplyTo = ap.Success ? ap.Groups[2].Value : null });
+                    }
                     if (list.Count > 0) options.ColStyles = list;
                 }
 
-                // New: cellColor thresholds
+                // cellColor thresholds
                 var cellMatch = Regex.Match(formattingString, @"cellColor\s*:\s*\{([\s\S]*?)\}", RegexOptions.IgnoreCase);
                 if (cellMatch.Success)
                 {
@@ -118,6 +121,8 @@ namespace Core.Helpers
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine("Error parsing formatting options: " + ex.Message); }
             return options;
         }
+
+        private static Dictionary<string, string> ParseValueColors(string formattingStr)
         {
             var valueColors = new Dictionary<string, string>();
             var match = Regex.Match(formattingStr, @"valueColors\s*:\s*\{([^}]+)\}");
@@ -131,9 +136,7 @@ namespace Core.Helpers
                 }
             }
             return valueColors;
-        }
-
-        public static BarChartOptions ParseBarChartOptions(Dictionary<string, string> instructions)
+        }public static BarChartOptions ParseBarChartOptions(Dictionary<string, string> instructions)
         {
             var options = new BarChartOptions
             {
@@ -476,5 +479,6 @@ namespace Core.Helpers
         }
     }
 }
+
 
 
