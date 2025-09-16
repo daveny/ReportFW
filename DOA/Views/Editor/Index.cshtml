@@ -17,9 +17,9 @@
     <div class="card mb-3">
         <div class="card-body row g-3 align-items-end">
             <div class="col-md-5">
-                <label class="form-label" for="ddlFiles"><strong>Meglévõ metrika betöltése</strong></label>
+                <label class="form-label" for="ddlFiles"><strong>MeglÚv§ metrika bet÷ltÚse</strong></label>
                 <select id="ddlFiles" class="form-select">
-                    <option value="">-- Válassz egy fájlt --</option>
+                    <option value="">-- Vßlassz egy fßjlt --</option>
                     @foreach (var f in files)
                     {
                         <option value="@f">@f</option>
@@ -27,15 +27,15 @@
                 </select>
             </div>
             <div class="col-md-2">
-                <button id="btnLoad" class="btn btn-primary w-100" type="button"><i class="fas fa-upload"></i> Betöltés</button>
+                <button id="btnLoad" class="btn btn-primary w-100" type="button"><i class="fas fa-upload"></i> Bet÷ltÚs</button>
             </div>
             <div class="col-md-5">
-                <label class="form-label" for="txtFileName"><strong>Mentés másként vagy új metrika neve</strong></label>
+                <label class="form-label" for="txtFileName"><strong>MentÚs mßskÚnt vagy ÿj metrika neve</strong></label>
 <div class="input-group">
     <input id="txtFileName" class="form-control" placeholder="pl. uj_metrika_neve" />
-    <button id="btnNew" class="btn btn-outline-secondary" type="button" title="Új metrika létrehozása"><i class="fas fa-plus"></i> Új</button>
-    <button id="btnSave" class="btn btn-success" type="button" title="Mentés"><i class="fas fa-save"></i> Mentés</button>
-    <button id="btnDelete" class="btn btn-outline-danger" type="button" title="Törlés"><i class="fas fa-trash"></i></button>
+    <button id="btnNew" class="btn btn-outline-secondary" type="button" title="-j metrika lÚtrehozßsa"><i class="fas fa-plus"></i> -j</button>
+    <button id="btnSave" class="btn btn-success" type="button" title="MentÚs"><i class="fas fa-save"></i> MentÚs</button>
+    <button id="btnDelete" class="btn btn-outline-danger" type="button" title="T÷rlÚs"><i class="fas fa-trash"></i></button>
 </div>
             </div>
         </div>
@@ -81,10 +81,10 @@
             </div>
 
             <div class="card mb-3">
-                <div class="card-header">Megjelenítés</div>
+                <div class="card-header">MegjelenÝtÚs</div>
                 <div class="card-body row g-3">
                     <div class="col-md-4">
-                        <label class="form-label">Típus</label>
+                        <label class="form-label">TÝpus</label>
                         <select id="representation" class="form-select">
                             <option value="table">Table</option>
                             <option value="barchart" selected>Bar Chart</option>
@@ -93,15 +93,15 @@
                         </select>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">Érték oszlop (series)</label>
+                        <label class="form-label">-rtÚk oszlop (series)</label>
                         <input id="series" class="form-control" placeholder="TotalSales" />
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">Kategória (legends)</label>
+                        <label class="form-label">Kateg¡ria (legends)</label>
                         <input id="legends" class="form-control" placeholder="OrderYear" />
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label">Csoportosítás (groupBy)</label>
+                        <label class="form-label">CsoportosÝtßs (groupBy)</label>
                         <input id="groupBy" class="form-control" placeholder="CountryRegionCode" />
                     </div>
                     <div id="pivotBlock" class="row g-3" style="display:none;">
@@ -109,7 +109,7 @@
                             <hr />
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" id="pivotEnabled">
-                                <label class="form-check-label" for="pivotEnabled">Pivot engedélyezése</label>
+                                <label class="form-check-label" for="pivotEnabled">Pivot engedÚlyezÚse</label>
                             </div>
                         </div>
                         <div class="col-md-3">
@@ -138,17 +138,17 @@
                 </div>
             </div>
             <div class="card mb-3">
-                <div class="card-header">Formázás</div>
+                <div class="card-header">Formßzßs</div>
                 <div class="card-body">
                     <div class="mb-3">
-                        <label class="form-label">Cím</label>
+                        <label class="form-label">CÝm</label>
                         <input id="title" class="form-control" placeholder="Revenue by Country and Year" />
                     </div>
                     <label class="form-label d-flex align-items-center justify-content-between">
-                        Érték alapú színezés (valueColors)
-                        <button id="btnAddColorPair" class="btn btn-sm btn-outline-secondary" type="button">Szín-érték pár hozzáadása</button>
+                        -rtÚk alapÿ szÝnezÚs (valueColors)
+                        <button id="btnAddColorPair" class="btn btn-sm btn-outline-secondary" type="button">SzÝn-ÚrtÚk pßr hozzßadßsa</button>
                     </label>
-                    <div id="valueColorPairs" class="vstack gap-2"></div>n<hr />n<div class="mb-2"><label class="form-label mb-0">Row Styles (raw objects inside []):</label>n  <textarea id="rowStylesRaw" class="form-control" rows="3" placeholder="{ match: 'Total', style: 'font-weight:bold' }"></textarea>n</div>n<div class="mb-2"><label class="form-label mb-0">Column Styles (raw objects inside []):</label>n  <textarea id="colStylesRaw" class="form-control" rows="3" placeholder="{ match: '2011', style: 'background:#eef', applyTo: 'header' }"></textarea>n</div>
+                    <div id="valueColorPairs" class="vstack gap-2"></div>nn<hr />n<div class="mb-2">n  <label class="form-label mb-0">Row Styles (raw objects inside []):</label>n  <textarea id="rowStylesRaw" class="form-control" rows="3" placeholder="{ match: 'Total', style: 'font-weight:bold' }"></textarea>n</div>n<div class="mb-2">n  <label class="form-label mb-0">Column Styles (raw objects inside []):</label>n  <textarea id="colStylesRaw" class="form-control" rows="3" placeholder="{ match: '2011', style: 'background:#eef', applyTo: 'header' }"></textarea>n</div>
                 </div>
             </div>
         </div>
@@ -156,8 +156,8 @@
         <div class="col-lg-7 d-flex flex-column gap-3">
             <div class="card flex-grow-1">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <span><i class="fas fa-eye"></i> Élõ elõnézet</span>
-                    <button id="btnPreview" class="btn btn-sm btn-primary" type="button"><i class="fas fa-sync-alt"></i> Elõnézet frissítése</button>
+                    <span><i class="fas fa-eye"></i> -l§ el§nÚzet</span>
+                    <button id="btnPreview" class="btn btn-sm btn-primary" type="button"><i class="fas fa-sync-alt"></i> El§nÚzet frissÝtÚse</button>
                 </div>
                 <div class="card-body">
                     <iframe id="previewFrame" style="width:100%; height: 100%; border:1px solid #e5e5e5; border-radius:8px;"></iframe>
@@ -248,38 +248,38 @@
       const wrap = document.createElement('div');
       wrap.className = 'filter-item border rounded p-2 mb-2';
       wrap.dataset.index = String(idx);
-      wrap.innerHTML =
-        '<div class="row g-2 align-items-end">'
-        + '<div class="col-12 col-md-3">'
-          + '<label class="form-label">Type</label>'
-          + '<select class="form-select filter-type">'
-            + '<option value="dropdown" ' + (f.type==='dropdown'?'selected':'') + '>dropdown</option>'
-          + '</select>'
-        + '</div>'
-        + '<div class="col-12 col-md-3">'
-          + '<label class="form-label">Param</label>'
-          + '<input type="text" class="form-control filter-param" placeholder="Country" value="' + (f.param||'') + '">'
-        + '</div>'
-        + '<div class="col-12 col-md-3">'
-          + '<label class="form-label">Label</label>'
-          + '<input type="text" class="form-control filter-label" placeholder="Country:" value="' + (f.label||'') + '">'
-        + '</div>'
-        + '<div class="col-12 col-md-3 text-end">'
-          + '<button type="button" class="btn btn-outline-danger btn-filter-remove"><i class="fas fa-trash"></i></button>'
-        + '</div>'
-        + '<div class="col-12">'
-          + '<label class="form-label">Query</label>'
-          + '<textarea rows="3" class="form-control filter-query" placeholder="SELECT DISTINCT ...">' + ((f.query||'').replace(/</g,'&lt;')) + '</textarea>'
-        + '</div>'
-        + '<div class="col-12 col-md-3">'
-          + '<label class="form-label">valueField</label>'
-          + '<input type="text" class="form-control filter-valueField" placeholder="Code" value="' + (f.valueField||'') + '">'
-        + '</div>'
-        + '<div class="col-12 col-md-3">'
-          + '<label class="form-label">textField</label>'
-          + '<input type="text" class="form-control filter-textField" placeholder="Name" value="' + (f.textField||'') + '">'
-        + '</div>'
-      + '</div>';
+      wrap.innerHTML = `
+        <div class="row g-2 align-items-end">
+          <div class="col-12 col-md-3">
+            <label class="form-label">Type</label>
+            <select class="form-select filter-type">
+              <option value="dropdown" ${f.type==='dropdown'?'selected':''}>dropdown</option>
+            </select>
+          </div>
+          <div class="col-12 col-md-3">
+            <label class="form-label">Param</label>
+            <input type="text" class="form-control filter-param" placeholder="Country" value="${f.param||''}">
+          </div>
+          <div class="col-12 col-md-3">
+            <label class="form-label">Label</label>
+            <input type="text" class="form-control filter-label" placeholder="Country:" value="${f.label||''}">
+          </div>
+          <div class="col-12 col-md-3 text-end">
+            <button type="button" class="btn btn-outline-danger btn-filter-remove"><i class="fas fa-trash"></i></button>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Query</label>
+            <textarea rows="3" class="form-control filter-query" placeholder="SELECT DISTINCT ...">${(f.query||'').replace(/</g,'&lt;')}</textarea>
+          </div>
+          <div class="col-12 col-md-3">
+            <label class="form-label">valueField</label>
+            <input type="text" class="form-control filter-valueField" placeholder="Code" value="${f.valueField||''}">
+          </div>
+          <div class="col-12 col-md-3">
+            <label class="form-label">textField</label>
+            <input type="text" class="form-control filter-textField" placeholder="Name" value="${f.textField||''}">
+          </div>
+        </div>`;
       (function enhanceFilterItem(){
         // add extra type options
         const sel = wrap.querySelector('.filter-type');
@@ -383,7 +383,7 @@
     const row = document.createElement('div');
     row.className = 'value-color-pair row g-2 align-items-center';
     row.innerHTML = `
-      <div class="col-6"><input type="text" class="form-control value-input" placeholder="érték (pl. FR)" value="${val||''}"></div>
+      <div class="col-6"><input type="text" class="form-control value-input" placeholder="ÚrtÚk (pl. FR)" value="${val||''}"></div>
       <div class="col-4"><input type="color" class="form-control form-control-color color-input" value="${col||'#000000'}"></div>
       <div class="col-2 text-end"><button type="button" class="btn btn-outline-danger btn-sm btn-remove">X</button></div>`;
     row.querySelector('.btn-remove').addEventListener('click', () => row.remove());
@@ -419,7 +419,7 @@
     resetForm();
     splitBlocks(originalThml);
 
-    if (!originalThml.trim()) return; // Ne próbálja feldolgozni az üres fájlt
+    if (!originalThml.trim()) return; // Ne pr¡bßlja feldolgozni az Øres fßjlt
 
     let success = false;
     // Extract meta from HTML comments: <!-- meta-name: ... -->, etc.
@@ -429,7 +429,7 @@
     const metaString = `metricName: ${metaName}n description: ${metaDesc}n owner: ${metaOwner}`;
     const metaMatch = (metaName || metaDesc || metaOwner) ? [null, metaString] : null;
     if (metaMatch){
-      success = true; // Legalább a metaadatokat megtaláltuk
+      success = true; // Legalßbb a metaadatokat megtalßltuk
       const m = metaMatch[1];
       const pick = (k)=>{ const rx = new RegExp(k+'s*:s*([^n]+)','i'); const mm = m.match(rx); return mm?mm[1].trim():''; };
       metricName.value = pick('metricName');
@@ -454,7 +454,7 @@
 
     const chartInner = (chartBlockIndex >= 0) ? originalBlocks[chartBlockIndex].inner : '';
     if (chartInner){
-      success = true; // A chart blokkot is megtaláltuk
+      success = true; // A chart blokkot is megtalßltuk
       // Capture with matching quote type so single quotes inside SQL don't terminate the match
       const qMatch = chartInner.match(/querys*=s*(["'])([sS]*?)1s*;?/i);
       if (qMatch) sqlQuery.value = qMatch[2].replace(/n/g,'n').replace(/"/g,'"').replace(//g,'');
@@ -464,7 +464,9 @@
       const grp = chartInner.match(/groupbys*=s*["']([^"']+)["']/i); if (grp) groupBy.value = grp[1];
       const titleMatch = chartInner.match(/titles*:s*["'](.*?)["']/i); if (titleMatch) title.value = titleMatch[1].replace(/"/g,'"');
       const colorsBlock = chartInner.match(/valueColorss*:s*{([sS]*?)}/i);
-      if (colorsBlock){}\r\n      var _mRS = chartInner.match(/rowStyles\s*:\s*\[([\s\S]*?)\]/i); if (rowStylesRaw) rowStylesRaw.value = _mRS ? _mRS[1].trim() : '';\r\n      var _mCS = chartInner.match(/colStyles\s*:\s*\[([\s\S]*?)\]/i); if (colStylesRaw) colStylesRaw.value = _mCS ? _mCS[1].trim() : '';\r\n
+      if (colorsBlock){}\n      var mRS = chartInner.match(/rowStyles\s*:\s*\[([\s\S]*?)\]/i); if (rowStylesRaw) rowStylesRaw.value = mRS ? mRS[1].trim() : '';\n      var mCS = chartInner.match(/colStyles\s*:\s*\[([\s\S]*?)\]/i); if (colStylesRaw) colStylesRaw.value = mCS ? mCS[1].trim() : '';);
+      }
+
       // Collect and preserve pivot* and other unknown chart props (key="value"; form)
       extraChartProps = {};
       const kv = chartInner.match(/b(w+)s*=s*(["'])([sS]*?)2s*;?/gi) || [];
@@ -493,7 +495,7 @@
     }
 
     if(!success) {
-        throw new Error("A .thtml fájl formátuma nem megfelelõ. Nem sikerült metaadatokat vagy chart blokkot találni.");
+        throw new Error("A .thtml fßjl formßtuma nem megfelel§. Nem sikerØlt metaadatokat vagy chart blokkot talßlni.");
     }
   }
 
@@ -508,7 +510,13 @@
     if (title.value.trim()) fmt.push('    title: "'+escapeQuotes(title.value.trim())+'"');
     if (lines.length)       fmt.push('    valueColors: {n'+lines.join(',n')+'n    }');
     const rep = (representation.value || '').trim() || 'barchart';
-    // Tartsuk meg a valós sortöréseket, ne tegyünk n-t
+    const rsRawEl = document.getElementById('rowStylesRaw');
+    const csRawEl = document.getElementById('colStylesRaw');
+    const rsRaw = (rsRawEl?.value || '').trim();
+    const csRaw = (csRawEl?.value || '').trim();
+    if (rsRaw) fmt.push('    rowStyles: [' + rsRaw + ']');
+    if (csRaw) fmt.push('    colStyles: [' + csRaw + ']');
+    // Tartsuk meg a val¡s sort÷rÚseket, ne tegyØnk n-t
     const q = (sqlQuery.value || '').replace(/r/g,'');
 
     // Update extraChartProps from Pivot UI
@@ -609,7 +617,7 @@ ${fmt.length ? fmt.join(',n') : '    '}
     const thtml = generateThtml();
     const url = '@Url.Action("RenderPreview","Editor")';
 
-    // Gyûjtsük ki a meglévõ elõnézetbõl a szûrõk aktuális értékeit
+    // GyûjtsØk ki a meglÚv§ el§nÚzetb§l a szûr§k aktußlis ÚrtÚkeit
     const framePrev = document.getElementById('previewFrame');
     const prevDoc = framePrev.contentDocument || framePrev.contentWindow?.document;
     const formVals = {};
@@ -622,7 +630,7 @@ ${fmt.length ? fmt.join(',n') : '    '}
     const body = new URLSearchParams();
     body.set('__RequestVerificationToken', token);
     body.set('thtmlCode', thtml);
-    // Addjuk hozzá a paramétereket a POST-hoz
+    // Addjuk hozzß a paramÚtereket a POST-hoz
     Object.keys(formVals).forEach(k => body.set(k, formVals[k] ?? ''));
 
     fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' }, body: body.toString() })
@@ -694,7 +702,7 @@ ${fmt.length ? fmt.join(',n') : '    '}
           // Auto-refresh on filter change (inside Metric pane)
           Array.from(paneMetric.querySelectorAll('.filter-control')).forEach(el => {
             el.addEventListener('change', () => {
-              // jelezzünk a szülõnek
+              // jelezzØnk a szØl§nek
               try { frame.contentWindow.parent.postMessage({ type: 'metric-editor-filter-change' }, '*'); } catch(e) { /* no-op */ }
             });
           });
@@ -703,10 +711,10 @@ ${fmt.length ? fmt.join(',n') : '    '}
       .catch(err => alert('Preview error: ' + err));
   }
 
-  // Események
+  // EsemÚnyek
   btnLoad.addEventListener('click', () => {
     const name = ddlFiles.value;
-    if (!name){ alert('Válassz egy metrikát!'); return; }
+    if (!name){ alert('Vßlassz egy metrikßt!'); return; }
 
     fetch('@Url.Action("LoadMetric","Editor")?fileName=' + encodeURIComponent(name))
       .then(r => r.ok ? r.text() : Promise.reject(r.status + ' ' + r.statusText))
@@ -714,9 +722,9 @@ ${fmt.length ? fmt.join(',n') : '    '}
           fileNameInput.value = name;
           try {
             parseAndLoad(txt);
-            renderPreview(); // Automatikus elõnézet betöltéskor
+            renderPreview(); // Automatikus el§nÚzet bet÷ltÚskor
           } catch(e) {
-            alert('Hiba a fájl feldolgozása közben: ' + e.message);
+            alert('Hiba a fßjl feldolgozßsa k÷zben: ' + e.message);
           }
       })
       .catch(err => alert('Load error: ' + err));
@@ -735,7 +743,7 @@ ${fmt.length ? fmt.join(',n') : '    '}
   });
 
   btnPreview.addEventListener('click', () => renderPreview());
-  // Üzenet figyelése az iframe-bõl (filter változás)
+  // -zenet figyelÚse az iframe-b§l (filter vßltozßs)
   window.addEventListener('message', (e) => {
     if (e?.data && e.data.type === 'metric-editor-filter-change') {
       renderPreview();
@@ -745,7 +753,7 @@ ${fmt.length ? fmt.join(',n') : '    '}
   btnSave.addEventListener('click', () => {
     const thtml = generateThtml();
     let name = (fileNameInput.value || '').trim();
-    if (!name){ alert('Adj meg fájlnevet (.thtml)!'); return; }
+    if (!name){ alert('Adj meg fßjlnevet (.thtml)!'); return; }
     if (!/.thtml$/i.test(name)) name += '.thtml';
 
     const body = new URLSearchParams();
@@ -770,9 +778,9 @@ ${fmt.length ? fmt.join(',n') : '    '}
   if (btnDelete){
     btnDelete.addEventListener('click', () => {
       let name = (fileNameInput.value || ddlFiles.value || '').trim();
-      if (!name){ alert('Nincs kiválasztott fájl.'); return; }
+      if (!name){ alert('Nincs kivßlasztott fßjl.'); return; }
       if (!/.thtml$/i.test(name)) name += '.thtml';
-      if (!confirm('Biztosan törlöd a metrikát: ' + name + ' ?')) return;
+      if (!confirm('Biztosan t÷rl÷d a metrikßt: ' + name + ' ?')) return;
 
       const body = new URLSearchParams();
       body.set('__RequestVerificationToken', token);
@@ -798,14 +806,14 @@ ${fmt.length ? fmt.join(',n') : '    '}
     </script>
     <style>
         .col-lg-7.d-flex > .card {
-            height: 85vh; /* Magasság a jobb kihasználtságért */
+            height: 85vh; /* Magassßg a jobb kihasznßltsßgÚrt */
         }
 
         #previewFrame {
             min-height: 400px;
         }
 
-        /* Stílusok az SQL panel magasságának növeléséhez */
+        /* StÝlusok az SQL panel magassßgßnak n÷velÚsÚhez */
         .sql-card {
             display: flex;
             flex-direction: column;
@@ -814,12 +822,12 @@ ${fmt.length ? fmt.join(',n') : '    '}
             .sql-card .card-body {
                 flex-grow: 1;
                 display: flex;
-                padding: 0; /* Eltávolítjuk a belsõ paddinget, hogy a textarea kitölthesse */
+                padding: 0; /* EltßvolÝtjuk a bels§ paddinget, hogy a textarea kit÷lthesse */
             }
 
         #sqlQuery {
             flex-grow: 1;
-            border: 0; /* Eltávolítjuk a keretet, mert a card-body már keretezi */
+            border: 0; /* EltßvolÝtjuk a keretet, mert a card-body mßr keretezi */
             resize: vertical;
             border-radius: var(--bs-card-inner-border-radius);
             padding: var(--bs-card-cap-padding-y) var(--bs-card-cap-padding-x);
@@ -840,5 +848,6 @@ ${fmt.length ? fmt.join(',n') : '    '}
         #sqlQuery { height: auto !important; min-height: 12em; resize: vertical; }
     </style>
 }
+
 
 
