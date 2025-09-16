@@ -174,7 +174,7 @@
   let originalBlocks = [];
   let chartBlockIndex = -1;
   // Preserve additional chart properties (e.g., pivot*) that the UI doesn't explicitly edit
-  let extraChartProps = {};
+  let extraChartProps = {};\n  let formattingRaw = '';
 
   const ddlFiles = document.getElementById('ddlFiles');
   const btnLoad = document.getElementById('btnLoad');
@@ -351,106 +351,7 @@
       if (!btn) return;
       const item = btn.closest('.filter-item');
       const idx = parseInt(item.dataset.index, 10);
-      if (!isNaN(idx)) { filters.splice(idx,1); renderFiltersUI(); }
-    });
-    const addBtn = document.getElementById('btnAddFilter');
-    if (addBtn){
-      addBtn.addEventListener('click', () => { filters.push(newFilterTemplate()); renderFiltersUI(); });
-    }
-  })();
-
-  function escapeQuotes(s){ return (s||'').replace(/\\/g,'\\\\').replace(/"/g,'\\"'); }
-
-  // Cleanup: remove accidental literal "\n" text nodes that may appear from templating
-  (function removeBackslashNTextNodes(){
-    const root = document.body;
-    const walk = (el) => {
-      const nodes = Array.from(el.childNodes);
-      for (const n of nodes){
-        if (n.nodeType === 3 && n.textContent && n.textContent.trim() === "\\n") {
-          n.parentNode.removeChild(n);
-        } else if (n.nodeType === 1) {
-          walk(n);
-        }
-      }
-    };
-    walk(root);
-  })();
-
-  function addValueColorPair(val, col){
-    const row = document.createElement('div');
-    row.className = 'value-color-pair row g-2 align-items-center';
-    row.innerHTML = `
-      <div class="col-6"><input type="text" class="form-control value-input" placeholder="érték (pl. FR)" value="${val||''}"></div>
-      <div class="col-4"><input type="color" class="form-control form-control-color color-input" value="${col||'#000000'}"></div>
-      <div class="col-2 text-end"><button type="button" class="btn btn-outline-danger btn-sm btn-remove">X</button></div>`;
-    row.querySelector('.btn-remove').addEventListener('click', () => row.remove());
-    valueColorPairs.appendChild(row);
-  }
-  btnAddColorPair.addEventListener('click', () => addValueColorPair('', '#000000'));
-
-  function resetForm(){
-    valueColorPairs.innerHTML = '';
-    metricName.value = description.value = owner.value = '';
-    sqlQuery.value = '';
-    representation.value = 'barchart';
-    series.value = legends.value = groupBy.value = title.value = '';
-    filters = [];
-    renderFiltersUI();
-  }
-
-  function splitBlocks(th){
-    originalBlocks = [];
-    chartBlockIndex = -1;
-    const re = /\{\{([\s\S]*?)\}\}/g; let m;
-    while ((m = re.exec(th)) !== null){
-      const inner = m[1];
-      const isFilter = /representation\s*=\s*['"]filter['"]/i.test(inner);
-      const isChart  = /representation\s*=\s*['"](barchart|linechart|piechart|table)['"]/i.test(inner);
-      originalBlocks.push({ full: m[0], inner, isFilter, isChart });
-    }
-    chartBlockIndex = originalBlocks.findIndex(b => b.isChart);
-  }
-
-  function parseAndLoad(thtml){
-    originalThml = thtml || '';
-    resetForm();
-    splitBlocks(originalThml);
-
-    if (!originalThml.trim()) return; // Ne próbálja feldolgozni az üres fájlt
-
-    let success = false;
-    // Extract meta from HTML comments: <!-- meta-name: ... -->, etc.
-    const metaName = (originalThml.match(/<!--\s*meta-name:\s*([\s\S]*?)-->/i) || [])[1] || '';
-    const metaDesc = (originalThml.match(/<!--\s*meta-description:\s*([\s\S]*?)-->/i) || [])[1] || '';
-    const metaOwner = (originalThml.match(/<!--\s*meta-owner:\s*([\s\S]*?)-->/i) || [])[1] || '';
-    const metaString = `metricName: ${metaName}\n description: ${metaDesc}\n owner: ${metaOwner}`;
-    const metaMatch = (metaName || metaDesc || metaOwner) ? [null, metaString] : null;
-    if (metaMatch){
-      success = true; // Legalább a metaadatokat megtaláltuk
-      const m = metaMatch[1];
-      const pick = (k)=>{ const rx = new RegExp(k+'\\s*:\\s*([^\\n]+)','i'); const mm = m.match(rx); return mm?mm[1].trim():''; };
-      metricName.value = pick('metricName');
-      description.value = pick('description');
-      owner.value = pick('owner');
-    }
-
-    // Load filters from existing THTML filter blocks
-    filters = [];
-    originalBlocks.filter(b => b.isFilter).forEach(b => {
-      const obj = newFilterTemplate();
-      const lines = b.inner.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
-      for (const line of lines){
-        const m = line.match(/^(\w+)\s*=\s*"([\s\S]*?)"\s*;?$/);
-        if (!m) continue;
-        const key = m[1]; const val = m[2].replace(/\\n/g,'\n').replace(/\\"/g,'"').replace(/\\\\/g,'\\');
-        if (key in obj || key === 'representation') obj[key] = val;
-      }
-      filters.push(obj);
-    });
-    renderFiltersUI();
-
-    const chartInner = (chartBlockIndex >= 0) ? originalBlocks[chartBlockIndex].inner : '';
+      if (!isNaN(idx)) { filters.splice(idx,1); renderFiltersUI(); chartInner = (chartBlockIndex >= 0) ? originalBlocks[chartBlockIndex].inner : '';
     if (chartInner){
       success = true; // A chart blokkot is megtaláltuk
       // Capture with matching quote type so single quotes inside SQL don't terminate the match
@@ -462,11 +363,7 @@
       const grp = chartInner.match(/groupby\s*=\s*["']([^"']+)["']/i); if (grp) groupBy.value = grp[1];
       const titleMatch = chartInner.match(/title\s*:\s*["'](.*?)["']/i); if (titleMatch) title.value = titleMatch[1].replace(/\\"/g,'"');
       const colorsBlock = chartInner.match(/valueColors\s*:\s*\{([\s\S]*?)\}/i);
-      if (colorsBlock){
-        colorsBlock[1].split(/\r?\n/).map(l=>l.trim()).forEach(l=>{
-          const m = l.match(/["']([^"']+)["']\s*:\s*["']([^"']+)["']/);
-          if (m) addValueColorPair(m[1], m[2]);
-        });
+      \n      // capture full formatting raw\n      var fmtMatch = chartInner.match(/formatting\s*=\s*\{([\s\S]*?)\}/i);\n      formattingRaw = fmtMatch ? fmtMatch[1].trim() : '';\n);
       }
 
       // Collect and preserve pivot* and other unknown chart props (key="value"; form)
@@ -844,3 +741,4 @@ ${fmt.length ? fmt.join(',\n') : '    '}
         #sqlQuery { height: auto !important; min-height: 12em; resize: vertical; }
     </style>
 }
+
