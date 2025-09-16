@@ -95,8 +95,7 @@ namespace Core.Helpers
             // Precompute column style map from formatting options and rules
             var columnCellStyles = new Dictionary<int, string>();
             var columnHeaderStyles = new Dictionary<int, string>();
-            var columnCellStyles = new Dictionary<int, string>();
-            var columnHeaderStyles = new Dictionary<int, string>();
+            foreach (DataColumn column in data.Columns)
             {
                 string headerStyle = "";
                 if (formatOptions.ColumnPattern != null &&

@@ -117,7 +117,7 @@ namespace Core.Helpers
             }
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine("Error parsing formatting options: " + ex.Message); }
             return options;
-        }private static Dictionary<string, string> ParseValueColors(string formattingStr)
+        }
         {
             var valueColors = new Dictionary<string, string>();
             var match = Regex.Match(formattingStr, @"valueColors\s*:\s*\{([^}]+)\}");
