@@ -148,7 +148,7 @@
                         -rtÚk alapÿ szÝnezÚs (valueColors)
                         <button id="btnAddColorPair" class="btn btn-sm btn-outline-secondary" type="button">SzÝn-ÚrtÚk pßr hozzßadßsa</button>
                     </label>
-                    <div id="valueColorPairs" class="vstack gap-2"></div>nn<hr />n<div class="mb-2">n  <label class="form-label mb-0">Row Styles (raw objects inside []):</label>n  <textarea id="rowStylesRaw" class="form-control" rows="3" placeholder="{ match: 'Total', style: 'font-weight:bold' }"></textarea>n</div>n<div class="mb-2">n  <label class="form-label mb-0">Column Styles (raw objects inside []):</label>n  <textarea id="colStylesRaw" class="form-control" rows="3" placeholder="{ match: '2011', style: 'background:#eef', applyTo: 'header' }"></textarea>n</div>
+                    <div id="valueColorPairs" class="vstack gap-2"></div>
                 </div>
             </div>
         </div>
@@ -203,8 +203,6 @@
   const title = document.getElementById('title');
   const valueColorPairs = document.getElementById('valueColorPairs');
   const btnAddColorPair = document.getElementById('btnAddColorPair');
-  const rowStylesRaw = document.getElementById('rowStylesRaw');
-  const colStylesRaw = document.getElementById('colStylesRaw');
   representation.addEventListener("change", updatePivotVisibility);
 
   function updatePivotVisibility(){
@@ -361,15 +359,15 @@
     }
   })();
 
-  function escapeQuotes(s){ return (s||'').replace(//g,'').replace(/"/g,'"'); }
+  function escapeQuotes(s){ return (s||'').replace(/\\/g,'\\\\').replace(/"/g,'\\"'); }
 
-  // Cleanup: remove accidental literal "n" text nodes that may appear from templating
+  // Cleanup: remove accidental literal "\n" text nodes that may appear from templating
   (function removeBackslashNTextNodes(){
     const root = document.body;
     const walk = (el) => {
       const nodes = Array.from(el.childNodes);
       for (const n of nodes){
-        if (n.nodeType === 3 && n.textContent && n.textContent.trim() === "n") {
+        if (n.nodeType === 3 && n.textContent && n.textContent.trim() === "\\n") {
           n.parentNode.removeChild(n);
         } else if (n.nodeType === 1) {
           walk(n);
@@ -404,11 +402,11 @@
   function splitBlocks(th){
     originalBlocks = [];
     chartBlockIndex = -1;
-    const re = /{{([sS]*?)}}/g; let m;
+    const re = /\{\{([\s\S]*?)\}\}/g; let m;
     while ((m = re.exec(th)) !== null){
       const inner = m[1];
-      const isFilter = /representations*=s*['"]filter['"]/i.test(inner);
-      const isChart  = /representations*=s*['"](barchart|linechart|piechart|table)['"]/i.test(inner);
+      const isFilter = /representation\s*=\s*['"]filter['"]/i.test(inner);
+      const isChart  = /representation\s*=\s*['"](barchart|linechart|piechart|table)['"]/i.test(inner);
       originalBlocks.push({ full: m[0], inner, isFilter, isChart });
     }
     chartBlockIndex = originalBlocks.findIndex(b => b.isChart);
@@ -423,15 +421,15 @@
 
     let success = false;
     // Extract meta from HTML comments: <!-- meta-name: ... -->, etc.
-    const metaName = (originalThml.match(/<!--s*meta-name:s*([sS]*?)-->/i) || [])[1] || '';
-    const metaDesc = (originalThml.match(/<!--s*meta-description:s*([sS]*?)-->/i) || [])[1] || '';
-    const metaOwner = (originalThml.match(/<!--s*meta-owner:s*([sS]*?)-->/i) || [])[1] || '';
-    const metaString = `metricName: ${metaName}n description: ${metaDesc}n owner: ${metaOwner}`;
+    const metaName = (originalThml.match(/<!--\s*meta-name:\s*([\s\S]*?)-->/i) || [])[1] || '';
+    const metaDesc = (originalThml.match(/<!--\s*meta-description:\s*([\s\S]*?)-->/i) || [])[1] || '';
+    const metaOwner = (originalThml.match(/<!--\s*meta-owner:\s*([\s\S]*?)-->/i) || [])[1] || '';
+    const metaString = `metricName: ${metaName}\n description: ${metaDesc}\n owner: ${metaOwner}`;
     const metaMatch = (metaName || metaDesc || metaOwner) ? [null, metaString] : null;
     if (metaMatch){
       success = true; // Legalßbb a metaadatokat megtalßltuk
       const m = metaMatch[1];
-      const pick = (k)=>{ const rx = new RegExp(k+'s*:s*([^n]+)','i'); const mm = m.match(rx); return mm?mm[1].trim():''; };
+      const pick = (k)=>{ const rx = new RegExp(k+'\\s*:\\s*([^\\n]+)','i'); const mm = m.match(rx); return mm?mm[1].trim():''; };
       metricName.value = pick('metricName');
       description.value = pick('description');
       owner.value = pick('owner');
@@ -441,11 +439,11 @@
     filters = [];
     originalBlocks.filter(b => b.isFilter).forEach(b => {
       const obj = newFilterTemplate();
-      const lines = b.inner.split(/r?n/).map(x=>x.trim()).filter(Boolean);
+      const lines = b.inner.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
       for (const line of lines){
-        const m = line.match(/^(w+)s*=s*"([sS]*?)"s*;?$/);
+        const m = line.match(/^(\w+)\s*=\s*"([\s\S]*?)"\s*;?$/);
         if (!m) continue;
-        const key = m[1]; const val = m[2].replace(/n/g,'n').replace(/"/g,'"').replace(//g,'');
+        const key = m[1]; const val = m[2].replace(/\\n/g,'\n').replace(/\\"/g,'"').replace(/\\\\/g,'\\');
         if (key in obj || key === 'representation') obj[key] = val;
       }
       filters.push(obj);
@@ -456,29 +454,33 @@
     if (chartInner){
       success = true; // A chart blokkot is megtalßltuk
       // Capture with matching quote type so single quotes inside SQL don't terminate the match
-      const qMatch = chartInner.match(/querys*=s*(["'])([sS]*?)1s*;?/i);
-      if (qMatch) sqlQuery.value = qMatch[2].replace(/n/g,'n').replace(/"/g,'"').replace(//g,'');
-      const rep = chartInner.match(/representations*=s*["']([^"']+)["']/i); if (rep) { representation.value = rep[1]; updatePivotVisibility(); }
-      const ser = chartInner.match(/seriess*=s*["']([^"']+)["']/i); if (ser) series.value = ser[1];
-      const leg = chartInner.match(/legendss*=s*["']([^"']+)["']/i); if (leg) legends.value = leg[1];
-      const grp = chartInner.match(/groupbys*=s*["']([^"']+)["']/i); if (grp) groupBy.value = grp[1];
-      const titleMatch = chartInner.match(/titles*:s*["'](.*?)["']/i); if (titleMatch) title.value = titleMatch[1].replace(/"/g,'"');
-      const colorsBlock = chartInner.match(/valueColorss*:s*{([sS]*?)}/i);
-      if (colorsBlock){}\n      var mRS = chartInner.match(/rowStyles\s*:\s*\[([\s\S]*?)\]/i); if (rowStylesRaw) rowStylesRaw.value = mRS ? mRS[1].trim() : '';\n      var mCS = chartInner.match(/colStyles\s*:\s*\[([\s\S]*?)\]/i); if (colStylesRaw) colStylesRaw.value = mCS ? mCS[1].trim() : '';);
+      const qMatch = chartInner.match(/query\s*=\s*(["'])([\s\S]*?)\1\s*;?/i);
+      if (qMatch) sqlQuery.value = qMatch[2].replace(/\\n/g,'\n').replace(/\\"/g,'"').replace(/\\\\/g,'\\');
+      const rep = chartInner.match(/representation\s*=\s*["']([^"']+)["']/i); if (rep) { representation.value = rep[1]; updatePivotVisibility(); }
+      const ser = chartInner.match(/series\s*=\s*["']([^"']+)["']/i); if (ser) series.value = ser[1];
+      const leg = chartInner.match(/legends\s*=\s*["']([^"']+)["']/i); if (leg) legends.value = leg[1];
+      const grp = chartInner.match(/groupby\s*=\s*["']([^"']+)["']/i); if (grp) groupBy.value = grp[1];
+      const titleMatch = chartInner.match(/title\s*:\s*["'](.*?)["']/i); if (titleMatch) title.value = titleMatch[1].replace(/\\"/g,'"');
+      const colorsBlock = chartInner.match(/valueColors\s*:\s*\{([\s\S]*?)\}/i);
+      if (colorsBlock){
+        colorsBlock[1].split(/\r?\n/).map(l=>l.trim()).forEach(l=>{
+          const m = l.match(/["']([^"']+)["']\s*:\s*["']([^"']+)["']/);
+          if (m) addValueColorPair(m[1], m[2]);
+        });
       }
 
       // Collect and preserve pivot* and other unknown chart props (key="value"; form)
       extraChartProps = {};
-      const kv = chartInner.match(/b(w+)s*=s*(["'])([sS]*?)2s*;?/gi) || [];
+      const kv = chartInner.match(/\b(\w+)\s*=\s*(["'])([\s\S]*?)\2\s*;?/gi) || [];
       kv.forEach(pair => {
-        const m = pair.match(/b(w+)s*=s*(["'])([sS]*?)2s*;?/i);
+        const m = pair.match(/\b(\w+)\s*=\s*(["'])([\s\S]*?)\2\s*;?/i);
         if (!m) return;
         const k = m[1]; const v = m[3];
         if (/^pivot/i.test(k)) extraChartProps[k] = v;
       });
       // Also handle bare flags like: pivotShowRowTotal;
-      (chartInner.match(/(^|s)(pivotw+)s*;/gi) || []).forEach(tok => {
-        const k = tok.replace(/^[sn]+/,'').replace(/s*;s*$/,'');
+      (chartInner.match(/(^|\s)(pivot\w+)\s*;/gi) || []).forEach(tok => {
+        const k = tok.replace(/^[\s\n]+/,'').replace(/\s*;\s*$/,'');
         if (/^pivot/i.test(k) && !(k in extraChartProps)) extraChartProps[k] = 'true';
       });
 
@@ -508,16 +510,10 @@
     });
     const fmt = [];
     if (title.value.trim()) fmt.push('    title: "'+escapeQuotes(title.value.trim())+'"');
-    if (lines.length)       fmt.push('    valueColors: {n'+lines.join(',n')+'n    }');
+    if (lines.length)       fmt.push('    valueColors: {\n'+lines.join(',\n')+'\n    }');
     const rep = (representation.value || '').trim() || 'barchart';
-    const rsRawEl = document.getElementById('rowStylesRaw');
-    const csRawEl = document.getElementById('colStylesRaw');
-    const rsRaw = (rsRawEl?.value || '').trim();
-    const csRaw = (csRawEl?.value || '').trim();
-    if (rsRaw) fmt.push('    rowStyles: [' + rsRaw + ']');
-    if (csRaw) fmt.push('    colStyles: [' + csRaw + ']');
-    // Tartsuk meg a val¡s sort÷rÚseket, ne tegyØnk n-t
-    const q = (sqlQuery.value || '').replace(/r/g,'');
+    // Tartsuk meg a val¡s sort÷rÚseket, ne tegyØnk \n-t
+    const q = (sqlQuery.value || '').replace(/\r/g,'');
 
     // Update extraChartProps from Pivot UI
     if (pivotEnabled && pivotEnabled.checked){
@@ -548,9 +544,9 @@ ${escapeQuotes(q)}
   series="${(series.value||'').trim()}";
   legends="${(legends.value||'').trim()}";
   groupBy="${(groupBy.value||'').trim()}";
-${extra.length ? extra.join('n') : ''}
+${extra.length ? extra.join('\n') : ''}
   formatting={
-${fmt.length ? fmt.join(',n') : '    '}
+${fmt.length ? fmt.join(',\n') : '    '}
   }
 }}`;
   }
@@ -563,28 +559,28 @@ ${fmt.length ? fmt.join(',n') : '    '}
     push('param', f.param || '');
     push('label', f.label || '');
     // Keep real newlines in query
-    const qf = (f.query || '').replace(/r/g,'');
-    kv.push('  query="n' + escapeQuotes(qf) + 'n  ";');
+    const qf = (f.query || '').replace(/\r/g,'');
+    kv.push('  query="\n' + escapeQuotes(qf) + '\n  ";');
     push('valueField', f.valueField || '');
     push('textField', f.textField || '');
     push('default', f.default || '');
     push('placeholder', f.placeholder || '');
     if (f.required) kv.push('  required="true";');
-    return `{{n${kv.join('n')}n}}`;
+    return `{{\n${kv.join('\n')}\n}}`;
   }
   function generateThtml(){
     const newChart = buildChartBlock();
-    const newFilters = (filters && filters.length) ? filters.map(buildFilterBlock).join('nn') : '';
+    const newFilters = (filters && filters.length) ? filters.map(buildFilterBlock).join('\n\n') : '';
 
     // 1) Update or insert meta comment lines from inputs
     const setMeta = (src, key, value) => {
       const clean = (value || '').toString().trim();
-      const rx = new RegExp(`<!--s*${key}s*:s*[sS]*?-->`, 'i');
+      const rx = new RegExp(`<!--\\s*${key}\\s*:\\s*[\\s\\S]*?-->`, 'i');
       const line = clean ? `<!-- ${key}: ${clean} -->` : '';
       if (rx.test(src)) {
-        return line ? src.replace(rx, line) : src.replace(rx, '').replace(/^s*n/, '');
+        return line ? src.replace(rx, line) : src.replace(rx, '').replace(/^\s*\n/, '');
       } else {
-        return line ? (line + "n" + src) : src;
+        return line ? (line + "\n" + src) : src;
       }
     };
 
@@ -595,7 +591,7 @@ ${fmt.length ? fmt.join(',n') : '    '}
     withMeta = setMeta(withMeta, 'meta-name', metricName.value);
 
     // Ensure a blank line between meta block and first component
-    withMeta = withMeta.replace(/^(<!--[^]*?-->)s*(?={{|$)/, (m)=> m.replace(/s*$/, 'nn'));
+    withMeta = withMeta.replace(/^(<!--[^]*?-->)\s*(?=\{\{|$)/, (m)=> m.replace(/\s*$/, '\n\n'));
 
     // 2) Remove existing filter and chart blocks, then insert new filters + chart
     let final = withMeta;
@@ -606,8 +602,8 @@ ${fmt.length ? fmt.join(',n') : '    '}
       final = final.replace(originalBlocks[chartBlockIndex].full, '');
     }
     final = final.trimEnd();
-    if (final.length) final += 'nn';
-    if (newFilters) final += newFilters + 'nn';
+    if (final.length) final += '\n\n';
+    if (newFilters) final += newFilters + '\n\n';
     final += newChart;
     return final;
   }
@@ -754,7 +750,7 @@ ${fmt.length ? fmt.join(',n') : '    '}
     const thtml = generateThtml();
     let name = (fileNameInput.value || '').trim();
     if (!name){ alert('Adj meg fßjlnevet (.thtml)!'); return; }
-    if (!/.thtml$/i.test(name)) name += '.thtml';
+    if (!/\.thtml$/i.test(name)) name += '.thtml';
 
     const body = new URLSearchParams();
     body.set('__RequestVerificationToken', token);
@@ -779,7 +775,7 @@ ${fmt.length ? fmt.join(',n') : '    '}
     btnDelete.addEventListener('click', () => {
       let name = (fileNameInput.value || ddlFiles.value || '').trim();
       if (!name){ alert('Nincs kivßlasztott fßjl.'); return; }
-      if (!/.thtml$/i.test(name)) name += '.thtml';
+      if (!/\.thtml$/i.test(name)) name += '.thtml';
       if (!confirm('Biztosan t÷rl÷d a metrikßt: ' + name + ' ?')) return;
 
       const body = new URLSearchParams();
@@ -848,6 +844,3 @@ ${fmt.length ? fmt.join(',n') : '    '}
         #sqlQuery { height: auto !important; min-height: 12em; resize: vertical; }
     </style>
 }
-
-
-
