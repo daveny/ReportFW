@@ -246,38 +246,39 @@
       const wrap = document.createElement('div');
       wrap.className = 'filter-item border rounded p-2 mb-2';
       wrap.dataset.index = String(idx);
-      wrap.innerHTML = `
-        <div class="row g-2 align-items-end">
-          <div class="col-12 col-md-3">
-            <label class="form-label">Type</label>
-            <select class="form-select filter-type">
-              <option value="dropdown" ${f.type==='dropdown'?'selected':''}>dropdown</option>
-            </select>
-          </div>
-          <div class="col-12 col-md-3">
-            <label class="form-label">Param</label>
-            <input type="text" class="form-control filter-param" placeholder="Country" value="${f.param||''}">
-          </div>
-          <div class="col-12 col-md-3">
-            <label class="form-label">Label</label>
-            <input type="text" class="form-control filter-label" placeholder="Country:" value="${f.label||''}">
-          </div>
-          <div class="col-12 col-md-3 text-end">
-            <button type="button" class="btn btn-outline-danger btn-filter-remove"><i class="fas fa-trash"></i></button>
-          </div>
-          <div class="col-12">
-            <label class="form-label">Query</label>
-            <textarea rows="3" class="form-control filter-query" placeholder="SELECT DISTINCT ...">${(f.query||'').replace(/</g,'&lt;')}</textarea>
-          </div>
-          <div class="col-12 col-md-3">
-            <label class="form-label">valueField</label>
-            <input type="text" class="form-control filter-valueField" placeholder="Code" value="${f.valueField||''}">
-          </div>
-          <div class="col-12 col-md-3">
-            <label class="form-label">textField</label>
-            <input type="text" class="form-control filter-textField" placeholder="Name" value="${f.textField||''}">
-          </div>
-        </div>`;
+      wrap.innerHTML = (
+  '<div class="row g-2 align-items-end">' +
+    '<div class="col-12 col-md-3">' +
+      '<label class="form-label">Type</label>' +
+      '<select class="form-select filter-type">' +
+        '<option value="dropdown" ' + (f.type==='dropdown'?'selected':'') + '>dropdown</option>' +
+      '</select>' +
+    '</div>' +
+    '<div class="col-12 col-md-3">' +
+      '<label class="form-label">Param</label>' +
+      '<input type="text" class="form-control filter-param" placeholder="Country" value="' + (f.param||'') + '">' +
+    '</div>' +
+    '<div class="col-12 col-md-3">' +
+      '<label class="form-label">Label</label>' +
+      '<input type="text" class="form-control filter-label" placeholder="Country:" value="' + (f.label||'') + '">' +
+    '</div>' +
+    '<div class="col-12 col-md-3 text-end">' +
+      '<button type="button" class="btn btn-outline-danger btn-filter-remove"><i class="fas fa-trash"></i></button>' +
+    '</div>' +
+    '<div class="col-12">' +
+      '<label class="form-label">Query</label>' +
+      '<textarea rows="3" class="form-control filter-query" placeholder="SELECT DISTINCT ...">' + ((f.query||'').replace(/</g,'&lt;')) + '</textarea>' +
+    '</div>' +
+    '<div class="col-12 col-md-3">' +
+      '<label class="form-label">valueField</label>' +
+      '<input type="text" class="form-control filter-valueField" placeholder="Code" value="' + (f.valueField||'') + '">' +
+    '</div>' +
+    '<div class="col-12 col-md-3">' +
+      '<label class="form-label">textField</label>' +
+      '<input type="text" class="form-control filter-textField" placeholder="Name" value="' + (f.textField||'') + '">' +
+    '</div>' +
+  '</div>'
+);
       (function enhanceFilterItem(){
         // add extra type options
         const sel = wrap.querySelector('.filter-type');
@@ -741,4 +742,5 @@ ${fmt.length ? fmt.join(',\n') : '    '}
         #sqlQuery { height: auto !important; min-height: 12em; resize: vertical; }
     </style>
 }
+
 
