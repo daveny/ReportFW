@@ -17,9 +17,9 @@
     <div class="card mb-3">
         <div class="card-body row g-3 align-items-end">
             <div class="col-md-5">
-                <label class="form-label" for="ddlFiles"><strong>Megl⁄vß metrika bet˜lt⁄se</strong></label>
+                <label class="form-label" for="ddlFiles"><strong>Megl√©v≈ë metrika bet√∂lt√©se</strong></label>
                 <select id="ddlFiles" class="form-select">
-                    <option value="">-- Vﬂlassz egy fﬂjlt --</option>
+                    <option value="">-- V√°lassz egy f√°jlt --</option>
                     @foreach (var f in files)
                     {
                         <option value="@f">@f</option>
@@ -27,15 +27,15 @@
                 </select>
             </div>
             <div class="col-md-2">
-                <button id="btnLoad" class="btn btn-primary w-100" type="button"><i class="fas fa-upload"></i> Bet˜lt⁄s</button>
+                <button id="btnLoad" class="btn btn-primary w-100" type="button"><i class="fas fa-upload"></i> Bet√∂lt√©s</button>
             </div>
             <div class="col-md-5">
-                <label class="form-label" for="txtFileName"><strong>Ment⁄s mﬂsk⁄nt vagy ˇj metrika neve</strong></label>
+                <label class="form-label" for="txtFileName"><strong>Ment√©s m√°sk√©nt vagy √∫j metrika neve</strong></label>
 <div class="input-group">
     <input id="txtFileName" class="form-control" placeholder="pl. uj_metrika_neve" />
-    <button id="btnNew" class="btn btn-outline-secondary" type="button" title="-j metrika l⁄trehozﬂsa"><i class="fas fa-plus"></i> -j</button>
-    <button id="btnSave" class="btn btn-success" type="button" title="Ment⁄s"><i class="fas fa-save"></i> Ment⁄s</button>
-    <button id="btnDelete" class="btn btn-outline-danger" type="button" title="T˜rl⁄s"><i class="fas fa-trash"></i></button>
+    <button id="btnNew" class="btn btn-outline-secondary" type="button" title="√öj metrika l√©trehoz√°sa"><i class="fas fa-plus"></i> √öj</button>
+    <button id="btnSave" class="btn btn-success" type="button" title="Ment√©s"><i class="fas fa-save"></i> Ment√©s</button>
+    <button id="btnDelete" class="btn btn-outline-danger" type="button" title="T√∂rl√©s"><i class="fas fa-trash"></i></button>
 </div>
             </div>
         </div>
@@ -81,10 +81,10 @@
             </div>
 
             <div class="card mb-3">
-                <div class="card-header">Megjelen›t⁄s</div>
+                <div class="card-header">Megjelen√≠t√©s</div>
                 <div class="card-body row g-3">
                     <div class="col-md-4">
-                        <label class="form-label">T›pus</label>
+                        <label class="form-label">T√≠pus</label>
                         <select id="representation" class="form-select">
                             <option value="table">Table</option>
                             <option value="barchart" selected>Bar Chart</option>
@@ -93,15 +93,15 @@
                         </select>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">-rt⁄k oszlop (series)</label>
+                        <label class="form-label">√ârt√©k oszlop (series)</label>
                         <input id="series" class="form-control" placeholder="TotalSales" />
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">Kateg°ria (legends)</label>
+                        <label class="form-label">Kateg√≥ria (legends)</label>
                         <input id="legends" class="form-control" placeholder="OrderYear" />
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label">Csoportos›tﬂs (groupBy)</label>
+                        <label class="form-label">Csoportos√≠t√°s (groupBy)</label>
                         <input id="groupBy" class="form-control" placeholder="CountryRegionCode" />
                     </div>
                     <div id="pivotBlock" class="row g-3" style="display:none;">
@@ -109,7 +109,7 @@
                             <hr />
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" id="pivotEnabled">
-                                <label class="form-check-label" for="pivotEnabled">Pivot enged⁄lyez⁄se</label>
+                                <label class="form-check-label" for="pivotEnabled">Pivot enged√©lyez√©se</label>
                             </div>
                         </div>
                         <div class="col-md-3">
@@ -138,15 +138,15 @@
                 </div>
             </div>
             <div class="card mb-3">
-                <div class="card-header">Formﬂzﬂs</div>
+                <div class="card-header">Form√°z√°s</div>
                 <div class="card-body">
                     <div class="mb-3">
-                        <label class="form-label">C›m</label>
+                        <label class="form-label">C√≠m</label>
                         <input id="title" class="form-control" placeholder="Revenue by Country and Year" />
                     </div>
                     <label class="form-label d-flex align-items-center justify-content-between">
-                        -rt⁄k alapˇ sz›nez⁄s (valueColors)
-                        <button id="btnAddColorPair" class="btn btn-sm btn-outline-secondary" type="button">Sz›n-⁄rt⁄k pﬂr hozzﬂadﬂsa</button>
+                        √ârt√©k alap√∫ sz√≠nez√©s (valueColors)
+                        <button id="btnAddColorPair" class="btn btn-sm btn-outline-secondary" type="button">Sz√≠n-√©rt√©k p√°r hozz√°ad√°sa</button>
                     </label>
                     <div id="valueColorPairs" class="vstack gap-2"></div>
                 </div>
@@ -156,8 +156,8 @@
         <div class="col-lg-7 d-flex flex-column gap-3">
             <div class="card flex-grow-1">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <span><i class="fas fa-eye"></i> -lß elßn⁄zet</span>
-                    <button id="btnPreview" class="btn btn-sm btn-primary" type="button"><i class="fas fa-sync-alt"></i> Elßn⁄zet friss›t⁄se</button>
+                    <span><i class="fas fa-eye"></i> -l≈ë el≈ën√©zet</span>
+                    <button id="btnPreview" class="btn btn-sm btn-primary" type="button"><i class="fas fa-sync-alt"></i> El≈ën√©zet friss√≠t√©se</button>
                 </div>
                 <div class="card-body">
                     <iframe id="previewFrame" style="width:100%; height: 100%; border:1px solid #e5e5e5; border-radius:8px;"></iframe>
@@ -381,7 +381,7 @@
     const row = document.createElement('div');
     row.className = 'value-color-pair row g-2 align-items-center';
     row.innerHTML = `
-      <div class="col-6"><input type="text" class="form-control value-input" placeholder="⁄rt⁄k (pl. FR)" value="${val||''}"></div>
+      <div class="col-6"><input type="text" class="form-control value-input" placeholder="√©rt√©k (pl. FR)" value="${val||''}"></div>
       <div class="col-4"><input type="color" class="form-control form-control-color color-input" value="${col||'#000000'}"></div>
       <div class="col-2 text-end"><button type="button" class="btn btn-outline-danger btn-sm btn-remove">X</button></div>`;
     row.querySelector('.btn-remove').addEventListener('click', () => row.remove());
@@ -417,7 +417,7 @@
     resetForm();
     splitBlocks(originalThml);
 
-    if (!originalThml.trim()) return; // Ne pr°bﬂlja feldolgozni az ÿres fﬂjlt
+    if (!originalThml.trim()) return; // Ne pr√≥b√°lja feldolgozni az √ºres f√°jlt
 
     let success = false;
     // Extract meta from HTML comments: <!-- meta-name: ... -->, etc.
@@ -427,7 +427,7 @@
     const metaString = `metricName: ${metaName}\n description: ${metaDesc}\n owner: ${metaOwner}`;
     const metaMatch = (metaName || metaDesc || metaOwner) ? [null, metaString] : null;
     if (metaMatch){
-      success = true; // Legalﬂbb a metaadatokat megtalﬂltuk
+      success = true; // Legal√°bb a metaadatokat megtal√°ltuk
       const m = metaMatch[1];
       const pick = (k)=>{ const rx = new RegExp(k+'\\s*:\\s*([^\\n]+)','i'); const mm = m.match(rx); return mm?mm[1].trim():''; };
       metricName.value = pick('metricName');
@@ -452,7 +452,7 @@
 
     const chartInner = (chartBlockIndex >= 0) ? originalBlocks[chartBlockIndex].inner : '';
     if (chartInner){
-      success = true; // A chart blokkot is megtalﬂltuk
+      success = true; // A chart blokkot is megtal√°ltuk
       // Capture with matching quote type so single quotes inside SQL don't terminate the match
       const qMatch = chartInner.match(/query\s*=\s*(["'])([\s\S]*?)\1\s*;?/i);
       if (qMatch) sqlQuery.value = qMatch[2].replace(/\\n/g,'\n').replace(/\\"/g,'"').replace(/\\\\/g,'\\');
@@ -497,7 +497,7 @@
     }
 
     if(!success) {
-        throw new Error("A .thtml fﬂjl formﬂtuma nem megfelelß. Nem sikerÿlt metaadatokat vagy chart blokkot talﬂlni.");
+        throw new Error("A .thtml f√°jl form√°tuma nem megfelel≈ë. Nem siker√ºlt metaadatokat vagy chart blokkot tal√°lni.");
     }
   }
 
@@ -512,7 +512,7 @@
     if (title.value.trim()) fmt.push('    title: "'+escapeQuotes(title.value.trim())+'"');
     if (lines.length)       fmt.push('    valueColors: {\n'+lines.join(',\n')+'\n    }');
     const rep = (representation.value || '').trim() || 'barchart';
-    // Tartsuk meg a val°s sort˜r⁄seket, ne tegyÿnk \n-t
+    // Tartsuk meg a val√≥s sort√∂r√©seket, ne tegy√ºnk \n-t
     const q = (sqlQuery.value || '').replace(/\r/g,'');
 
     // Update extraChartProps from Pivot UI
@@ -613,7 +613,7 @@ ${fmt.length ? fmt.join(',\n') : '    '}
     const thtml = generateThtml();
     const url = '@Url.Action("RenderPreview","Editor")';
 
-    // Gy˚jtsÿk ki a megl⁄vß elßn⁄zetbßl a sz˚rßk aktuﬂlis ⁄rt⁄keit
+    // Gy≈±jts√ºk ki a megl√©v≈ë el≈ën√©zetb≈ël a sz≈±r≈ëk aktu√°lis √©rt√©keit
     const framePrev = document.getElementById('previewFrame');
     const prevDoc = framePrev.contentDocument || framePrev.contentWindow?.document;
     const formVals = {};
@@ -626,7 +626,7 @@ ${fmt.length ? fmt.join(',\n') : '    '}
     const body = new URLSearchParams();
     body.set('__RequestVerificationToken', token);
     body.set('thtmlCode', thtml);
-    // Addjuk hozzﬂ a param⁄tereket a POST-hoz
+    // Adjuk hozz√° a param√©tereket a POST-hoz
     Object.keys(formVals).forEach(k => body.set(k, formVals[k] ?? ''));
 
     fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' }, body: body.toString() })
@@ -698,7 +698,7 @@ ${fmt.length ? fmt.join(',\n') : '    '}
           // Auto-refresh on filter change (inside Metric pane)
           Array.from(paneMetric.querySelectorAll('.filter-control')).forEach(el => {
             el.addEventListener('change', () => {
-              // jelezzÿnk a szÿlßnek
+              // jelezz√ºnk a sz√ºl≈ënek
               try { frame.contentWindow.parent.postMessage({ type: 'metric-editor-filter-change' }, '*'); } catch(e) { /* no-op */ }
             });
           });
@@ -707,10 +707,10 @@ ${fmt.length ? fmt.join(',\n') : '    '}
       .catch(err => alert('Preview error: ' + err));
   }
 
-  // Esem⁄nyek
+  // Esem√©nyek
   btnLoad.addEventListener('click', () => {
     const name = ddlFiles.value;
-    if (!name){ alert('Vﬂlassz egy metrikﬂt!'); return; }
+    if (!name){ alert('V√°lassz egy metrik√°t!'); return; }
 
     fetch('@Url.Action("LoadMetric","Editor")?fileName=' + encodeURIComponent(name))
       .then(r => r.ok ? r.text() : Promise.reject(r.status + ' ' + r.statusText))
@@ -718,9 +718,9 @@ ${fmt.length ? fmt.join(',\n') : '    '}
           fileNameInput.value = name;
           try {
             parseAndLoad(txt);
-            renderPreview(); // Automatikus elßn⁄zet bet˜lt⁄skor
+            renderPreview(); // Automatikus el≈ën√©zet bet√∂lt√©skor
           } catch(e) {
-            alert('Hiba a fﬂjl feldolgozﬂsa k˜zben: ' + e.message);
+            alert('Hiba a f√°jl feldolgoz√°sa k√∂zben: ' + e.message);
           }
       })
       .catch(err => alert('Load error: ' + err));
@@ -739,7 +739,7 @@ ${fmt.length ? fmt.join(',\n') : '    '}
   });
 
   btnPreview.addEventListener('click', () => renderPreview());
-  // -zenet figyel⁄se az iframe-bßl (filter vﬂltozﬂs)
+  // -zenet figyel√©se az iframe-b≈ël (filter v√°ltoz√°s)
   window.addEventListener('message', (e) => {
     if (e?.data && e.data.type === 'metric-editor-filter-change') {
       renderPreview();
@@ -749,7 +749,7 @@ ${fmt.length ? fmt.join(',\n') : '    '}
   btnSave.addEventListener('click', () => {
     const thtml = generateThtml();
     let name = (fileNameInput.value || '').trim();
-    if (!name){ alert('Adj meg fﬂjlnevet (.thtml)!'); return; }
+    if (!name){ alert('Adj meg f√°jlnevet (.thtml)!'); return; }
     if (!/\.thtml$/i.test(name)) name += '.thtml';
 
     const body = new URLSearchParams();
@@ -774,9 +774,9 @@ ${fmt.length ? fmt.join(',\n') : '    '}
   if (btnDelete){
     btnDelete.addEventListener('click', () => {
       let name = (fileNameInput.value || ddlFiles.value || '').trim();
-      if (!name){ alert('Nincs kivﬂlasztott fﬂjl.'); return; }
+      if (!name){ alert('Nincs kiv√°lasztott f√°jl.'); return; }
       if (!/\.thtml$/i.test(name)) name += '.thtml';
-      if (!confirm('Biztosan t˜rl˜d a metrikﬂt: ' + name + ' ?')) return;
+      if (!confirm('Biztosan t√∂rl√∂d a metrik√°t: ' + name + ' ?')) return;
 
       const body = new URLSearchParams();
       body.set('__RequestVerificationToken', token);
@@ -802,14 +802,14 @@ ${fmt.length ? fmt.join(',\n') : '    '}
     </script>
     <style>
         .col-lg-7.d-flex > .card {
-            height: 85vh; /* Magassﬂg a jobb kihasznﬂltsﬂg⁄rt */
+            height: 85vh; /* Magass√°g a jobb kihaszn√°lts√°g√©rt */
         }
 
         #previewFrame {
             min-height: 400px;
         }
 
-        /* St›lusok az SQL panel magassﬂgﬂnak n˜vel⁄s⁄hez */
+        /* St√≠lusok az SQL panel magass√°g√°nak n√∂vel√©s√©hez */
         .sql-card {
             display: flex;
             flex-direction: column;
@@ -818,12 +818,12 @@ ${fmt.length ? fmt.join(',\n') : '    '}
             .sql-card .card-body {
                 flex-grow: 1;
                 display: flex;
-                padding: 0; /* Eltﬂvol›tjuk a belsß paddinget, hogy a textarea kit˜lthesse */
+                padding: 0; /* Elt√°vol√≠tjuk a bels≈ë paddinget, hogy a textarea kit√∂lthesse */
             }
 
         #sqlQuery {
             flex-grow: 1;
-            border: 0; /* Eltﬂvol›tjuk a keretet, mert a card-body mﬂr keretezi */
+            border: 0; /* Elt√°vol√≠tjuk a keretet, mert a card-body m√°r keretezi */
             resize: vertical;
             border-radius: var(--bs-card-inner-border-radius);
             padding: var(--bs-card-cap-padding-y) var(--bs-card-cap-padding-x);
