@@ -134,35 +134,24 @@
                                 <option value="max">max</option>
                             </select>
                         </div>
-
-                        <div class="col-12 mt-3">
-                            <hr>
-                            <h5><i class="fas fa-palette"></i> Pivot Styling Rules</h5>
-                        </div>
-
-                        <!-- Row Styling Section -->
-                        <div class="col-12">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <label class="form-label mb-0"><strong>Row Styles</strong></label>
-                                <button id="btnAddRowStyle" type="button" class="btn btn-sm btn-outline-secondary">
-                                    <i class="fas fa-plus"></i> Add Row Style
-                                </button>
+                        <div id="pivotStylingUiContainer" class="col-12">
+                            <div class="mt-3">
+                                <hr>
+                                <h5><i class="fas fa-palette"></i> Pivot Styling Rules</h5>
                             </div>
-                            <div id="rowStylesContainer" class="vstack gap-2">
-                                <!-- Dynamic content will go here -->
+                            <div>
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label class="form-label mb-0"><strong>Row Styles</strong></label>
+                                    <button id="btnAddRowStyle" type="button" class="btn btn-sm btn-outline-secondary"><i class="fas fa-plus"></i> Add Row Style</button>
+                                </div>
+                                <div id="rowStylesContainer" class="vstack gap-2"></div>
                             </div>
-                        </div>
-
-                        <!-- Column Styling Section -->
-                        <div class="col-12">
-                            <div class="d-flex justify-content-between align-items-center mb-1 mt-3">
-                                <label class="form-label mb-0"><strong>Column Styles</strong></label>
-                                <button id="btnAddColStyle" type="button" class="btn btn-sm btn-outline-secondary">
-                                    <i class="fas fa-plus"></i> Add Column Style
-                                </button>
-                            </div>
-                            <div id="colStylesContainer" class="vstack gap-2">
-                                <!-- Dynamic content will go here -->
+                            <div class="mt-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label class="form-label mb-0"><strong>Column Styles</strong></label>
+                                    <button id="btnAddColStyle" type="button" class="btn btn-sm btn-outline-secondary"><i class="fas fa-plus"></i> Add Column Style</button>
+                                </div>
+                                <div id="colStylesContainer" class="vstack gap-2"></div>
                             </div>
                         </div>
                     </div>
@@ -204,12 +193,10 @@
   let originalThml = '';
   let originalBlocks = [];
   let chartBlockIndex = -1;
-  // Preserve additional chart properties (e.g., pivot*) that the UI doesn't explicitly edit
   let extraChartProps = {};
-  // --- NEW STATE ---
   let rowStyles = [];
   let colStyles = [];
-
+  let filters = [];
 
   const ddlFiles = document.getElementById('ddlFiles');
   const btnLoad = document.getElementById('btnLoad');
@@ -218,9 +205,7 @@
   const btnPreview = document.getElementById('btnPreview');
   const btnDelete = document.getElementById('btnDelete');
   const fileNameInput = document.getElementById('txtFileName');
-
   const token = document.querySelector("input[name='__RequestVerificationToken']")?.value || "";
-
   const metricName = document.getElementById('metricName');
   const owner = document.getElementById('owner');
   const description = document.getElementById('description');
@@ -229,7 +214,6 @@
   const series = document.getElementById('series');
   const legends = document.getElementById('legends');
   const groupBy = document.getElementById('groupBy');
-  // Pivot controls
   const pivotEnabled = document.getElementById('pivotEnabled');
   const pivotRow = document.getElementById('pivotRow');
   const pivotCol = document.getElementById('pivotCol');
@@ -238,13 +222,16 @@
   const title = document.getElementById('title');
   const valueColorPairs = document.getElementById('valueColorPairs');
   const btnAddColorPair = document.getElementById('btnAddColorPair');
-  representation.addEventListener("change", updatePivotVisibility);
-
-  // --- NEW DOM REFS ---
   const btnAddRowStyle = document.getElementById('btnAddRowStyle');
   const rowStylesContainer = document.getElementById('rowStylesContainer');
   const btnAddColStyle = document.getElementById('btnAddColStyle');
   const colStylesContainer = document.getElementById('colStylesContainer');
+  const pivotStylingUiContainer = document.getElementById('pivotStylingUiContainer');
+
+  function updatePivotStylingVisibility() {
+      if (!pivotStylingUiContainer || !pivotEnabled) return;
+      pivotStylingUiContainer.style.display = pivotEnabled.checked ? '' : 'none';
+  }
 
   function updatePivotVisibility(){
     try{
@@ -252,10 +239,13 @@
       if (!block) return;
       const show = (representation?.value || '').toLowerCase() === 'table';
       block.style.display = show ? '' : 'none';
+      updatePivotStylingVisibility();
     } catch(e) { /* noop */ }
   }
 
-  // --- PIVOT STYLING UI ---
+  representation.addEventListener("change", updatePivotVisibility);
+  pivotEnabled.addEventListener('change', updatePivotStylingVisibility);
+
   function renderRowStylesUI() {
     if (!rowStylesContainer) return;
     rowStylesContainer.innerHTML = '';
@@ -288,7 +278,6 @@
         const selBoth = (rule.applyTo || 'both') === 'both' ? 'selected' : '';
         const selHeader = rule.applyTo === 'header' ? 'selected' : '';
         const selCells = rule.applyTo === 'cells' ? 'selected' : '';
-
         item.innerHTML = `
             <div class="col-4">
                 <input type="text" class="form-control form-control-sm col-style-match" placeholder="Match (e.g., '2011')" value="${rule.match || ''}">
@@ -320,7 +309,6 @@
           colStyles.push({ match: '', style: '', applyTo: 'both' });
           renderColStylesUI();
       });
-
       if(rowStylesContainer) rowStylesContainer.addEventListener('click', e => {
           if (e.target.classList.contains('btn-remove-row-style')) {
               const index = e.target.closest('.row').dataset.index;
@@ -335,7 +323,6 @@
               renderColStylesUI();
           }
       });
-
       if(rowStylesContainer) rowStylesContainer.addEventListener('input', e => {
           const index = e.target.closest('.row').dataset.index;
           if (!rowStyles[index]) return;
@@ -354,21 +341,10 @@
   }
   bindPivotStyleEditors();
 
-  // --- Filters state + UI ---
-  let filters = [];
-
   function newFilterTemplate() {
     return {
-      representation: 'filter',
-      type: 'dropdown',
-      param: '',
-      label: '',
-      query: '',
-      valueField: '',
-      textField: '',
-      default: '',
-      placeholder: '',
-      required: false
+      representation: 'filter', type: 'dropdown', param: '', label: '', query: '',
+      valueField: '', textField: '', default: '', placeholder: '', required: false
     };
   }
 
@@ -377,10 +353,7 @@
     const hint = document.getElementById('noFiltersHint');
     if (!list || !hint) return;
     list.innerHTML = '';
-    if (!filters.length){
-      hint.style.display = 'block';
-      return;
-    }
+    if (!filters.length){ hint.style.display = 'block'; return; }
     hint.style.display = 'none';
     filters.forEach((f, idx) => {
       const wrap = document.createElement('div');
@@ -388,74 +361,38 @@
       wrap.dataset.index = String(idx);
       wrap.innerHTML = `
         <div class="row g-2 align-items-end">
-          <div class="col-12 col-md-3">
-            <label class="form-label">Type</label>
-            <select class="form-select filter-type">
-              <option value="dropdown" ${f.type==='dropdown'?'selected':''}>dropdown</option>
-            </select>
-          </div>
-          <div class="col-12 col-md-3">
-            <label class="form-label">Param</label>
-            <input type="text" class="form-control filter-param" placeholder="Country" value="${f.param||''}">
-          </div>
-          <div class="col-12 col-md-3">
-            <label class="form-label">Label</label>
-            <input type="text" class="form-control filter-label" placeholder="Country:" value="${f.label||''}">
-          </div>
-          <div class="col-12 col-md-3 text-end">
-            <button type="button" class="btn btn-outline-danger btn-filter-remove"><i class="fas fa-trash"></i></button>
-          </div>
-          <div class="col-12">
-            <label class="form-label">Query</label>
-            <textarea rows="3" class="form-control filter-query" placeholder="SELECT DISTINCT ...">${(f.query||'').replace(/</g,'&lt;')}</textarea>
-          </div>
-          <div class="col-12 col-md-3">
-            <label class="form-label">valueField</label>
-            <input type="text" class="form-control filter-valueField" placeholder="Code" value="${f.valueField||''}">
-          </div>
-          <div class="col-12 col-md-3">
-            <label class="form-label">textField</label>
-            <input type="text" class="form-control filter-textField" placeholder="Name" value="${f.textField||''}">
-          </div>
+          <div class="col-12 col-md-3"><label class="form-label">Type</label><select class="form-select filter-type"><option value="dropdown" ${f.type==='dropdown'?'selected':''}>dropdown</option></select></div>
+          <div class="col-12 col-md-3"><label class="form-label">Param</label><input type="text" class="form-control filter-param" placeholder="Country" value="${f.param||''}"></div>
+          <div class="col-12 col-md-3"><label class="form-label">Label</label><input type="text" class="form-control filter-label" placeholder="Country:" value="${f.label||''}"></div>
+          <div class="col-12 col-md-3 text-end"><button type="button" class="btn btn-outline-danger btn-filter-remove"><i class="fas fa-trash"></i></button></div>
+          <div class="col-12"><label class="form-label">Query</label><textarea rows="3" class="form-control filter-query" placeholder="SELECT DISTINCT ...">${(f.query||'').replace(/</g,'&lt;')}</textarea></div>
+          <div class="col-12 col-md-3"><label class="form-label">valueField</label><input type="text" class="form-control filter-valueField" placeholder="Code" value="${f.valueField||''}"></div>
+          <div class="col-12 col-md-3"><label class="form-label">textField</label><input type="text" class="form-control filter-textField" placeholder="Name" value="${f.textField||''}"></div>
         </div>`;
       (function enhanceFilterItem(){
-        // add extra type options
         const sel = wrap.querySelector('.filter-type');
-        const ensureOpt = (val, text) => {
-          if (!sel) return;
-          if (![...sel.options].some(o => o.value === val)){
-            const o = document.createElement('option'); o.value = val; o.textContent = text; sel.appendChild(o);
-          }
-        };
-        ensureOpt('text','text');
-        ensureOpt('datepicker','datepicker');
+        const ensureOpt = (val, text) => { if (!sel) return; if (![...sel.options].some(o => o.value === val)){ const o = document.createElement('option'); o.value = val; o.textContent = text; sel.appendChild(o); } };
+        ensureOpt('text','text'); ensureOpt('datepicker','datepicker');
         if (sel && f.type) sel.value = f.type;
-
-        // add default / placeholder / required controls
         const row = wrap.querySelector('.row');
         if (row){
-          const mkCol = (html) => { const d = document.createElement('div'); d.className='col-12 col-md-3'; d.innerHTML=html; return d; };
+          const mkCol = (html,cls='col-12 col-md-3') => { const d = document.createElement('div'); d.className=cls; d.innerHTML=html; return d; };
           const colDef = mkCol('<label class="form-label">Default</label><input type="text" class="form-control filter-default" placeholder="Default value">');
           const colPh  = mkCol('<label class="form-label">Placeholder</label><input type="text" class="form-control filter-placeholder" placeholder="Placeholder (text/date)">');
-          const colReq = document.createElement('div'); colReq.className = 'col-12 col-md-3 d-flex align-items-center';
-          colReq.innerHTML = '<div class="form-check mt-4"><input class="form-check-input filter-required" type="checkbox" id="tmp_'+(f.param||idx)+'"><label class="form-check-label" for="tmp_'+(f.param||idx)+'">Required</label></div>';
+          const colReq = mkCol('<div class="form-check mt-4"><input class="form-check-input filter-required" type="checkbox" id="tmp_'+(f.param||idx)+'"><label class="form-check-label" for="tmp_'+(f.param||idx)+'">Required</label></div>', 'col-12 col-md-3 d-flex align-items-center');
           row.appendChild(colDef); row.appendChild(colPh); row.appendChild(colReq);
           colDef.querySelector('.filter-default').value = f.default || '';
           colPh.querySelector('.filter-placeholder').value = f.placeholder || '';
           colReq.querySelector('.filter-required').checked = !!f.required;
         }
-
-        // show/hide query related blocks based on type
         const toggleByType = () => {
           const t = (sel?.value || 'dropdown');
-          const qc = wrap.querySelector('.filter-query')?.parentElement;
-          const vc = wrap.querySelector('.filter-valueField')?.parentElement;
-          const tc = wrap.querySelector('.filter-textField')?.parentElement;
-          const ph = wrap.querySelector('.filter-placeholder')?.closest('.col-12, .col-12 col-md-3') || wrap.querySelector('.filter-placeholder')?.parentElement;
-          if (qc) qc.style.display = (t==='dropdown') ? '' : 'none';
-          if (vc) vc.style.display = (t==='dropdown') ? '' : 'none';
-          if (tc) tc.style.display = (t==='dropdown') ? '' : 'none';
-          if (ph) ph.style.display = (t==='dropdown') ? 'none' : '';
+          const disp = (show) => show ? '' : 'none';
+          wrap.querySelector('.filter-query')?.parentElement.style.display = disp(t==='dropdown');
+          wrap.querySelector('.filter-valueField')?.parentElement.style.display = disp(t==='dropdown');
+          wrap.querySelector('.filter-textField')?.parentElement.style.display = disp(t==='dropdown');
+          const phEl = wrap.querySelector('.filter-placeholder')?.closest('.col-12, .col-12 col-md-3') || wrap.querySelector('.filter-placeholder')?.parentElement;
+          if(phEl) phEl.style.display = disp(t!=='dropdown');
         };
         toggleByType();
         if (sel){ sel.addEventListener('change', toggleByType); }
@@ -482,39 +419,26 @@
   (function bindFilterEditors(){
     const list = document.getElementById('filtersList');
     if (!list) return;
-    list.addEventListener('input', (e) => {
-      const item = e.target.closest('.filter-item');
-      if (item) syncFilterFromDom(item);
-    });
+    list.addEventListener('input', (e) => { const item = e.target.closest('.filter-item'); if (item) syncFilterFromDom(item); });
     list.addEventListener('click', (e) => {
       const btn = e.target.closest('.btn-filter-remove');
       if (!btn) return;
-      const item = btn.closest('.filter-item');
-      const idx = parseInt(item.dataset.index, 10);
+      const idx = parseInt(btn.closest('.filter-item').dataset.index, 10);
       if (!isNaN(idx)) { filters.splice(idx,1); renderFiltersUI(); }
     });
-    const addBtn = document.getElementById('btnAddFilter');
-    if (addBtn){
-      addBtn.addEventListener('click', () => { filters.push(newFilterTemplate()); renderFiltersUI(); });
-    }
+    document.getElementById('btnAddFilter')?.addEventListener('click', () => { filters.push(newFilterTemplate()); renderFiltersUI(); });
   })();
 
   function escapeQuotes(s){ return (s||'').replace(/\\/g,'\\\\').replace(/"/g,'\\"'); }
 
-  // Cleanup: remove accidental literal "\n" text nodes that may appear from templating
   (function removeBackslashNTextNodes(){
-    const root = document.body;
     const walk = (el) => {
-      const nodes = Array.from(el.childNodes);
-      for (const n of nodes){
-        if (n.nodeType === 3 && n.textContent && n.textContent.trim() === "\\n") {
-          n.parentNode.removeChild(n);
-        } else if (n.nodeType === 1) {
-          walk(n);
-        }
+      for (const n of Array.from(el.childNodes)){
+        if (n.nodeType === 3 && n.textContent?.trim() === "\\n") n.parentNode.removeChild(n);
+        else if (n.nodeType === 1) walk(n);
       }
     };
-    walk(root);
+    walk(document.body);
   })();
 
   function addValueColorPair(val, col){
@@ -535,18 +459,13 @@
     sqlQuery.value = '';
     representation.value = 'barchart';
     series.value = legends.value = groupBy.value = title.value = '';
-    filters = [];
-    renderFiltersUI();
-    // --- NEW RESET LOGIC ---
-    rowStyles = [];
-    colStyles = [];
-    renderRowStylesUI();
-    renderColStylesUI();
+    filters = []; renderFiltersUI();
+    rowStyles = []; renderRowStylesUI();
+    colStyles = []; renderColStylesUI();
   }
 
   function splitBlocks(th){
-    originalBlocks = [];
-    chartBlockIndex = -1;
+    originalBlocks = []; chartBlockIndex = -1;
     const re = /\{\{([\s\S]*?)\}\}/g; let m;
     while ((m = re.exec(th)) !== null){
       const inner = m[1];
@@ -561,35 +480,28 @@
     originalThml = thtml || '';
     resetForm();
     splitBlocks(originalThml);
-
-    if (!originalThml.trim()) return; // Ne próbálja feldolgozni az üres fájlt
+    if (!originalThml.trim()) return;
 
     let success = false;
-    // Extract meta from HTML comments: <!-- meta-name: ... -->, etc.
     const metaName = (originalThml.match(/<!--\s*meta-name:\s*([\s\S]*?)-->/i) || [])[1] || '';
     const metaDesc = (originalThml.match(/<!--\s*meta-description:\s*([\s\S]*?)-->/i) || [])[1] || '';
     const metaOwner = (originalThml.match(/<!--\s*meta-owner:\s*([\s\S]*?)-->/i) || [])[1] || '';
-    const metaString = `metricName: ${metaName}\n description: ${metaDesc}\n owner: ${metaOwner}`;
-    const metaMatch = (metaName || metaDesc || metaOwner) ? [null, metaString] : null;
-    if (metaMatch){
-      success = true; // Legalább a metaadatokat megtaláltuk
-      const m = metaMatch[1];
-      const pick = (k)=>{ const rx = new RegExp(k+'\\s*:\\s*([^\\n]+)','i'); const mm = m.match(rx); return mm?mm[1].trim():''; };
-      metricName.value = pick('metricName');
-      description.value = pick('description');
-      owner.value = pick('owner');
+    if (metaName || metaDesc || metaOwner) {
+        success = true;
+        metricName.value = metaName.trim();
+        description.value = metaDesc.trim();
+        owner.value = metaOwner.trim();
     }
 
-    // Load filters from existing THTML filter blocks
     filters = [];
     originalBlocks.filter(b => b.isFilter).forEach(b => {
       const obj = newFilterTemplate();
-      const lines = b.inner.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
-      for (const line of lines){
+      for (const line of b.inner.split(/\r?\n/).map(x=>x.trim()).filter(Boolean)){
         const m = line.match(/^(\w+)\s*=\s*"([\s\S]*?)"\s*;?$/);
-        if (!m) continue;
-        const key = m[1]; const val = m[2].replace(/\\n/g,'\n').replace(/\\"/g,'"').replace(/\\\\/g,'\\');
-        if (key in obj || key === 'representation') obj[key] = val;
+        if (m) {
+            const key = m[1]; const val = m[2].replace(/\\n/g,'\n').replace(/\\"/g,'"').replace(/\\\\/g,'\\');
+            if (key in obj || key === 'representation') obj[key] = val;
+        }
       }
       filters.push(obj);
     });
@@ -597,33 +509,26 @@
 
     const chartInner = (chartBlockIndex >= 0) ? originalBlocks[chartBlockIndex].inner : '';
     if (chartInner){
-      success = true; // A chart blokkot is megtaláltuk
-      // Capture with matching quote type so single quotes inside SQL don't terminate the match
+      success = true;
       const qMatch = chartInner.match(/query\s*=\s*(["'])([\s\S]*?)\1\s*;?/i);
       if (qMatch) sqlQuery.value = qMatch[2].replace(/\\n/g,'\n').replace(/\\"/g,'"').replace(/\\\\/g,'\\');
-      const rep = chartInner.match(/representation\s*=\s*["']([^"']+)["']/i); if (rep) { representation.value = rep[1]; updatePivotVisibility(); }
-      const ser = chartInner.match(/series\s*=\s*["']([^"']+)["']/i); if (ser) series.value = ser[1];
-      const leg = chartInner.match(/legends\s*=\s*["']([^"']+)["']/i); if (leg) legends.value = leg[1];
-      const grp = chartInner.match(/groupby\s*=\s*["']([^"']+)["']/i); if (grp) groupBy.value = grp[1];
+      const getVal = (k) => (chartInner.match(new RegExp(k+'\\s*=\\s*["\']([^"\']+)["\']', 'i')) || [])[1];
+      representation.value = getVal('representation') || 'barchart';
+      series.value = getVal('series') || '';
+      legends.value = getVal('legends') || '';
+      groupBy.value = getVal('groupBy') || '';
 
-      // --- NEW: Unified formatting parser ---
       const formattingMatch = chartInner.match(/formatting\s*=\s*\{([\s\S]*?)\}/i);
       if (formattingMatch) {
-          const formattingContent = formattingMatch[1];
+          const content = formattingMatch[1];
           const unescape = s => s.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
-
-          const titleMatch = formattingContent.match(/title\s*:\s*["'](.*?)["']/i);
+          const titleMatch = content.match(/title\s*:\s*["'](.*?)["']/i);
           if (titleMatch) title.value = unescape(titleMatch[1]);
-
-          const colorsBlock = formattingContent.match(/valueColors\s*:\s*\{([\s\S]*?)\}/i);
+          const colorsBlock = content.match(/valueColors\s*:\s*\{([\s\S]*?)\}/i);
           if (colorsBlock){
-              colorsBlock[1].split(/\r?\n/).map(l=>l.trim()).forEach(l=>{
-                  const m = l.match(/["']([^"']+)["']\s*:\s*["']([^"']+)["']/);
-                  if (m) addValueColorPair(m[1], m[2]);
-              });
+              for (const m of colorsBlock[1].matchAll(/["']([^"']+)["']\s*:\s*["']([^"']+)["']/g)) addValueColorPair(m[1], m[2]);
           }
-
-          const rowStylesMatch = formattingContent.match(/rowStyles\s*:\s*\[([\s\S]*?)\]/);
+          const rowStylesMatch = content.match(/rowStyles\s*:\s*\[([\s\S]*?)\]/);
           if (rowStylesMatch) {
               for (const m of rowStylesMatch[1].matchAll(/\{([\s\S]*?)\}/g)) {
                   const rule = m[1];
@@ -632,8 +537,7 @@
                   if (match != null && style != null) rowStyles.push({ match: unescape(match), style: unescape(style) });
               }
           }
-
-          const colStylesMatch = formattingContent.match(/colStyles\s*:\s*\[([\s\S]*?)\]/);
+          const colStylesMatch = content.match(/colStyles\s*:\s*\[([\s\S]*?)\]/);
           if (colStylesMatch) {
               for (const m of colStylesMatch[1].matchAll(/\{([\s\S]*?)\}/g)) {
                   const rule = m[1];
@@ -647,66 +551,52 @@
       renderRowStylesUI();
       renderColStylesUI();
 
-      // Collect and preserve pivot* and other unknown chart props (key="value"; form)
       extraChartProps = {};
       const kv = chartInner.match(/\b(\w+)\s*=\s*(["'])([\s\S]*?)\2\s*;?/gi) || [];
       kv.forEach(pair => {
         const m = pair.match(/\b(\w+)\s*=\s*(["'])([\s\S]*?)\2\s*;?/i);
-        if (!m) return;
-        const k = m[1]; const v = m[3];
-        if (/^pivot/i.test(k)) extraChartProps[k] = v;
+        if (m) {
+            const k = m[1]; const v = m[3];
+            if (/^pivot/i.test(k)) extraChartProps[k] = v;
+        }
       });
-      // Also handle bare flags like: pivotShowRowTotal;
       (chartInner.match(/(^|\s)(pivot\w+)\s*;/gi) || []).forEach(tok => {
         const k = tok.replace(/^[\s\n]+/,'').replace(/\s*;\s*$/,'');
         if (/^pivot/i.test(k) && !(k in extraChartProps)) extraChartProps[k] = 'true';
       });
 
-      // Populate Pivot UI from preserved props
       const pr = extraChartProps['pivotRow'] || '';
       const pc = extraChartProps['pivotCol'] || '';
-      const pv = extraChartProps['pivotValue'] || '';
-      const pa = extraChartProps['pivotAgg'] || '';
       if (pivotRow) pivotRow.value = pr;
       if (pivotCol) pivotCol.value = pc;
-      if (pivotValue) pivotValue.value = pv;
-      if (pa && pivotAgg) pivotAgg.value = pa;
+      if (pivotValue) pivotValue.value = extraChartProps['pivotValue'] || '';
+      if (pivotAgg) pivotAgg.value = extraChartProps['pivotAgg'] || 'sum';
       if (pivotEnabled) pivotEnabled.checked = !!(pr && pc);
     }
-
-    if(!success) {
-        throw new Error("A .thtml fájl formátuma nem megfelelő. Nem sikerült metaadatokat vagy chart blokkot találni.");
-    }
+    updatePivotVisibility();
+    if(!success) { throw new Error("A .thtml fájl formátuma nem megfelelő. Nem sikerült metaadatokat vagy chart blokkot találni."); }
   }
 
   function buildChartBlock(){
-    const lines = [];
+    const vColorLines = [];
     document.querySelectorAll('#valueColorPairs .value-color-pair').forEach(p=>{
       const key = (p.querySelector('.value-input')?.value || '').trim();
       const col = (p.querySelector('.color-input')?.value || '').trim();
-      if (key && col) lines.push('      "'+key+'": "'+col+'"');
+      if (key && col) vColorLines.push(`      "${key}": "${col}"`);
     });
 
     const fmt = [];
-    if (title.value.trim()) fmt.push('    title: "'+escapeQuotes(title.value.trim())+'"');
-    if (lines.length)       fmt.push('    valueColors: {\n'+lines.join(',\n')+'\n    }');
-
-    // --- NEW: Serialize pivot styles ---
+    if (title.value.trim()) fmt.push(`    title: "${escapeQuotes(title.value.trim())}"`);
+    if (vColorLines.length) fmt.push(`    valueColors: {\n${vColorLines.join(',\n')}\n    }`);
     if (rowStyles.length > 0) {
-        const styleLines = rowStyles
-            .filter(r => r.match || r.style)
-            .map(r => `      { match: "${escapeQuotes(r.match)}", style: "${escapeQuotes(r.style)}" }`)
-            .join(',\n');
+        const styleLines = rowStyles.filter(r => r.match || r.style).map(r => `      { match: "${escapeQuotes(r.match)}", style: "${escapeQuotes(r.style)}" }`).join(',\n');
         if(styleLines) fmt.push(`    rowStyles: [\n${styleLines}\n    ]`);
     }
     if (colStyles.length > 0) {
-        const styleLines = colStyles
-            .filter(r => r.match || r.style)
-            .map(r => {
+        const styleLines = colStyles.filter(r => r.match || r.style).map(r => {
                 const applyToAttr = (r.applyTo && r.applyTo !== 'both') ? `, applyTo: "${r.applyTo}"` : '';
                 return `      { match: "${escapeQuotes(r.match)}", style: "${escapeQuotes(r.style)}"${applyToAttr} }`;
-            })
-            .join(',\n');
+            }).join(',\n');
         if(styleLines) fmt.push(`    colStyles: [\n${styleLines}\n    ]`);
     }
 
@@ -714,82 +604,51 @@
     const q = (sqlQuery.value || '').replace(/\r/g,'');
 
     if (pivotEnabled && pivotEnabled.checked){
-      if (!extraChartProps) extraChartProps = {};
       extraChartProps['pivotRow'] = (pivotRow?.value||'').trim();
       extraChartProps['pivotCol'] = (pivotCol?.value||'').trim();
       extraChartProps['pivotValue'] = (pivotValue?.value||'').trim();
-      extraChartProps['pivotAgg'] = ((pivotAgg?.value)||'sum').trim() || 'sum';
-    } else if (extraChartProps) {
-      delete extraChartProps['pivotRow'];
-      delete extraChartProps['pivotCol'];
-      delete extraChartProps['pivotValue'];
-      delete extraChartProps['pivotAgg'];
+      extraChartProps['pivotAgg'] = ((pivotAgg?.value)||'sum').trim();
+    } else {
+      ['pivotRow', 'pivotCol', 'pivotValue', 'pivotAgg'].forEach(k => delete extraChartProps[k]);
     }
 
     const extra = [];
     Object.keys(extraChartProps || {}).forEach(k => {
       const v = extraChartProps[k];
-      if (v != null && String(v).length) extra.push('  '+k+'="'+escapeQuotes(String(v))+'";');
+      if (v != null && String(v).length) extra.push(`  ${k}="${escapeQuotes(String(v))}";`);
     });
 
-    return `{{
-  query="
-${escapeQuotes(q)}
-  ";
-  representation="${rep}";
-  series="${(series.value||'').trim()}";
-  legends="${(legends.value||'').trim()}";
-  groupBy="${(groupBy.value||'').trim()}";
-${extra.length ? extra.join('\n') : ''}
-  formatting={
-${fmt.length ? fmt.join(',\n') : '    '}
-  }
-}}`;
+    return `{{\n  query="\n${escapeQuotes(q)}\n  ";\n  representation="${rep}";\n  series="${(series.value||'').trim()}";\n  legends="${(legends.value||'').trim()}";\n  groupBy="${(groupBy.value||'').trim()}";\n${extra.length ? extra.join('\n')+'\n' : ''}  formatting={\n${fmt.length ? fmt.join(',\n') : '    '}\n  }\n}}`;
   }
 
   function buildFilterBlock(f){
     const kv = [];
     const push = (k,v) => { if (v != null && String(v).length) kv.push(`  ${k}="${escapeQuotes(String(v))}";`); };
-    push('representation', 'filter');
-    push('type', f.type || 'dropdown');
-    push('param', f.param || '');
-    push('label', f.label || '');
+    push('representation', 'filter'); push('type', f.type || 'dropdown'); push('param', f.param || ''); push('label', f.label || '');
     const qf = (f.query || '').replace(/\r/g,'');
-    kv.push('  query="\n' + escapeQuotes(qf) + '\n  ";');
-    push('valueField', f.valueField || '');
-    push('textField', f.textField || '');
-    push('default', f.default || '');
-    push('placeholder', f.placeholder || '');
+    kv.push(`  query="\n${escapeQuotes(qf)}\n  ";`);
+    push('valueField', f.valueField || ''); push('textField', f.textField || ''); push('default', f.default || ''); push('placeholder', f.placeholder || '');
     if (f.required) kv.push('  required="true";');
     return `{{\n${kv.join('\n')}\n}}`;
   }
+
   function generateThtml(){
     const newChart = buildChartBlock();
     const newFilters = (filters && filters.length) ? filters.map(buildFilterBlock).join('\n\n') : '';
-
     const setMeta = (src, key, value) => {
       const clean = (value || '').toString().trim();
       const rx = new RegExp(`<!--\\s*${key}\\s*:\\s*[\\s\\S]*?-->`, 'i');
       const line = clean ? `<!-- ${key}: ${clean} -->` : '';
-      if (rx.test(src)) {
-        return line ? src.replace(rx, line) : src.replace(rx, '').replace(/^\s*\n/, '');
-      } else {
-        return line ? (line + "\n" + src) : src;
-      }
+      return rx.test(src) ? (line ? src.replace(rx, line) : src.replace(rx, '').replace(/^\s*\n/, '')) : (line ? (line + "\n" + src) : src);
     };
-
     let withMeta = originalThml || '';
     withMeta = setMeta(withMeta, 'meta-owner', owner.value);
     withMeta = setMeta(withMeta, 'meta-description', description.value);
     withMeta = setMeta(withMeta, 'meta-name', metricName.value);
-
     withMeta = withMeta.replace(/^(<!--[^]*?-->)\s*(?=\{\{|$)/, (m)=> m.replace(/\s*$/, '\n\n'));
-
     let final = withMeta;
     originalBlocks.filter(b => b.isFilter).forEach(b => { final = final.replace(b.full, ''); });
-    if (chartBlockIndex >= 0) {
-      final = final.replace(originalBlocks[chartBlockIndex].full, '');
-    }
+    if (chartBlockIndex >= 0) final = final.replace(originalBlocks[chartBlockIndex].full, '');
     final = final.trimEnd();
     if (final.length) final += '\n\n';
     if (newFilters) final += newFilters + '\n\n';
@@ -801,143 +660,78 @@ ${fmt.length ? fmt.join(',\n') : '    '}
     updatePivotVisibility();
     const thtml = generateThtml();
     const url = '@Url.Action("RenderPreview","Editor")';
-
     const framePrev = document.getElementById('previewFrame');
     const prevDoc = framePrev.contentDocument || framePrev.contentWindow?.document;
     const formVals = {};
-    if (prevDoc && prevDoc.body){
-      prevDoc.querySelectorAll('.filter-control').forEach(el => {
-        if (el.name) formVals[el.name] = el.value;
-      });
-    }
-
+    if (prevDoc && prevDoc.body) prevDoc.querySelectorAll('.filter-control').forEach(el => { if (el.name) formVals[el.name] = el.value; });
     const body = new URLSearchParams();
     body.set('__RequestVerificationToken', token);
     body.set('thtmlCode', thtml);
     Object.keys(formVals).forEach(k => body.set(k, formVals[k] ?? ''));
-
     fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' }, body: body.toString() })
       .then(r => r.text())
       .then(html => {
         const frame = document.getElementById('previewFrame');
         const doc = frame.contentDocument || frame.contentWindow.document;
-
         doc.open();
-        doc.write(`<!doctype html>
-<html><head><meta charset="utf-8">
-<link rel="stylesheet" href="@Url.Content("~/Content/bootstrap.min.css")">
-<link rel="stylesheet" href="@Url.Content("~/Content/datatables.min.css")">
-</head><body class="p-2"></body></html>`);
+        doc.write(`<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="@Url.Content("~/Content/bootstrap.min.css")"><link rel="stylesheet" href="@Url.Content("~/Content/datatables.min.css")"></head><body class="p-2"></body></html>`);
         doc.close();
-
-        const libs = [
-          '@Url.Content("~/Scripts/chart.min.js")',
-          '@Url.Content("~/Scripts/jquery-3.7.1.min.js")',
-          '@Url.Content("~/Scripts/datatables.min.js")'
-        ];
-        libs.reduce((p, src) => p.then(() => new Promise((res, rej) => {
-          const s = doc.createElement('script');
-          s.src = src; s.onload = res; s.onerror = () => rej(src); doc.head.appendChild(s);
-        })), Promise.resolve()).then(() => {
-          doc.body.innerHTML = `
-            <div class="container-fluid">
-              <ul class="nav nav-tabs" id="previewTabs">
-                <li class="nav-item"><a href="#" id="tabMetric" class="nav-link active">Metric</a></li>
-                <li class="nav-item"><a href="#" id="tabThtml" class="nav-link">THTML</a></li>
-              </ul>
-              <div class="border border-top-0 p-2" id="tabContent" style="min-height:360px; border-radius:0 0 .375rem .375rem;">
-                <div id="paneMetric"></div>
-                <pre id="paneThtml" style="display:none; white-space:pre-wrap; font-family:ui-monospace,Consolas,Monaco,monospace; background:#f8f9fa; padding:12px; border-radius:6px;">
-                </pre>
-              </div>
-            </div>`;
-
+        const libs = ['@Url.Content("~/Scripts/chart.min.js")', '@Url.Content("~/Scripts/jquery-3.7.1.min.js")', '@Url.Content("~/Scripts/datatables.min.js")'];
+        libs.reduce((p, src) => p.then(() => new Promise((res, rej) => { const s = doc.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(src); doc.head.appendChild(s); })), Promise.resolve()).then(() => {
+          doc.body.innerHTML = `<div class="container-fluid"><ul class="nav nav-tabs" id="previewTabs"><li class="nav-item"><a href="#" id="tabMetric" class="nav-link active">Metric</a></li><li class="nav-item"><a href="#" id="tabThtml" class="nav-link">THTML</a></li></ul><div class="border border-top-0 p-2" id="tabContent" style="min-height:360px; border-radius:0 0 .375rem .375rem;"><div id="paneMetric"></div><pre id="paneThtml" style="display:none; white-space:pre-wrap; font-family:ui-monospace,Consolas,Monaco,monospace; background:#f8f9fa; padding:12px; border-radius:6px;"></pre></div></div>`;
           const paneMetric = doc.getElementById('paneMetric');
           const paneThtml = doc.getElementById('paneThtml');
           paneMetric.innerHTML = html;
           paneThtml.textContent = thtml;
-
-          Array.from(paneMetric.querySelectorAll('script')).forEach(old => {
-            const s = doc.createElement('script');
-            if (old.textContent) s.text = old.textContent;
-            old.parentNode.replaceChild(s, old);
-          });
-
+          Array.from(paneMetric.querySelectorAll('script')).forEach(old => { const s = doc.createElement('script'); if (old.textContent) s.text = old.textContent; old.parentNode.replaceChild(s, old); });
           const linkMetric = doc.getElementById('tabMetric');
           const linkThtml = doc.getElementById('tabThtml');
           const activate = (name) => {
-            if (name === 'metric') {
-              linkMetric.classList.add('active'); linkThtml.classList.remove('active');
-              paneMetric.style.display='block'; paneThtml.style.display='none';
-            } else {
-              linkThtml.classList.add('active'); linkMetric.classList.remove('active');
-              paneMetric.style.display='none'; paneThtml.style.display='block';
-            }
+            linkMetric.classList.toggle('active', name==='metric'); linkThtml.classList.toggle('active', name!=='metric');
+            paneMetric.style.display = (name==='metric')?'block':'none'; paneThtml.style.display = (name!=='metric')?'block':'none';
           };
           linkMetric.addEventListener('click', (e)=>{ e.preventDefault(); activate('metric'); });
           linkThtml.addEventListener('click', (e)=>{ e.preventDefault(); activate('thtml'); });
           activate('metric');
-
           Array.from(paneMetric.querySelectorAll('.filter-control')).forEach(el => {
-            el.addEventListener('change', () => {
-              try { frame.contentWindow.parent.postMessage({ type: 'metric-editor-filter-change' }, '*'); } catch(e) { /* no-op */ }
-            });
+            el.addEventListener('change', () => { try { frame.contentWindow.parent.postMessage({ type: 'metric-editor-filter-change' }, '*'); } catch(e) {} });
           });
         }).catch(src => alert('Preview script load error: ' + src));
       })
       .catch(err => alert('Preview error: ' + err));
   }
 
-  // Események
   btnLoad.addEventListener('click', () => {
     const name = ddlFiles.value;
     if (!name){ alert('Válassz egy metrikát!'); return; }
-
     fetch('@Url.Action("LoadMetric","Editor")?fileName=' + encodeURIComponent(name))
       .then(r => r.ok ? r.text() : Promise.reject(r.status + ' ' + r.statusText))
       .then(txt => {
           fileNameInput.value = name;
-          try {
-            parseAndLoad(txt);
-            renderPreview(); // Automatikus előnézet betöltéskor
-          } catch(e) {
-            alert('Hiba a fájl feldolgozása közben: ' + e.message);
-          }
+          try { parseAndLoad(txt); renderPreview(); } catch(e) { alert('Hiba a fájl feldolgozása közben: ' + e.message); }
       })
       .catch(err => alert('Load error: ' + err));
   });
 
   btnNew.addEventListener('click', () => {
-      ddlFiles.value='';
-      fileNameInput.value='';
-      originalThml='';
-      originalBlocks=[];
-      chartBlockIndex=-1;
-      resetForm();
+      ddlFiles.value=''; fileNameInput.value=''; originalThml=''; originalBlocks=[]; chartBlockIndex=-1; resetForm();
       const frame = document.getElementById('previewFrame');
       const doc = frame.contentDocument || frame.contentWindow.document;
       if (doc.body) doc.body.innerHTML = '';
   });
 
   btnPreview.addEventListener('click', () => renderPreview());
-  // -zenet figyelése az iframe-ből (filter változás)
-  window.addEventListener('message', (e) => {
-    if (e?.data && e.data.type === 'metric-editor-filter-change') {
-      renderPreview();
-    }
-  });
+  window.addEventListener('message', (e) => { if (e?.data && e.data.type === 'metric-editor-filter-change') renderPreview(); });
 
   btnSave.addEventListener('click', () => {
     const thtml = generateThtml();
     let name = (fileNameInput.value || '').trim();
     if (!name){ alert('Adj meg fájlnevet (.thtml)!'); return; }
     if (!/\.thtml$/i.test(name)) name += '.thtml';
-
     const body = new URLSearchParams();
     body.set('__RequestVerificationToken', token);
     body.set('fileName', name);
     body.set('content', thtml);
-
     fetch('@Url.Action("SaveMetric","Editor")', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' }, body: body.toString() })
       .then(r => r.json())
       .then(data => {
@@ -951,18 +745,15 @@ ${fmt.length ? fmt.join(',\n') : '    '}
       .catch(err => alert('Save error: ' + err.message));
   });
 
-  // Delete current metric file
   if (btnDelete){
     btnDelete.addEventListener('click', () => {
       let name = (fileNameInput.value || ddlFiles.value || '').trim();
       if (!name){ alert('Nincs kiválasztott fájl.'); return; }
       if (!/\.thtml$/i.test(name)) name += '.thtml';
       if (!confirm('Biztosan törlöd a metrikát: ' + name + ' ?')) return;
-
       const body = new URLSearchParams();
       body.set('__RequestVerificationToken', token);
       body.set('fileName', name);
-
       fetch('@Url.Action("DeleteMetric","Editor")', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' }, body: body.toString() })
         .then(r => r.json())
         .then(data => {
