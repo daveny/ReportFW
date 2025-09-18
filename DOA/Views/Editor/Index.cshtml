@@ -388,9 +388,14 @@
         const toggleByType = () => {
           const t = (sel?.value || 'dropdown');
           const disp = (show) => show ? '' : 'none';
-          wrap.querySelector('.filter-query')?.parentElement.style.display = disp(t==='dropdown');
-          wrap.querySelector('.filter-valueField')?.parentElement.style.display = disp(t==='dropdown');
-          wrap.querySelector('.filter-textField')?.parentElement.style.display = disp(t==='dropdown');
+          const queryParent = wrap.querySelector('.filter-query')?.parentElement;
+          if (queryParent) queryParent.style.display = disp(t === 'dropdown');
+
+          const valueFieldParent = wrap.querySelector('.filter-valueField')?.parentElement;
+          if (valueFieldParent) valueFieldParent.style.display = disp(t === 'dropdown');
+
+          const textFieldParent = wrap.querySelector('.filter-textField')?.parentElement;
+          if (textFieldParent) textFieldParent.style.display = disp(t === 'dropdown');
           const phEl = wrap.querySelector('.filter-placeholder')?.closest('.col-12, .col-12 col-md-3') || wrap.querySelector('.filter-placeholder')?.parentElement;
           if(phEl) phEl.style.display = disp(t!=='dropdown');
         };
@@ -512,11 +517,17 @@
       success = true;
       const qMatch = chartInner.match(/query\s*=\s*(["'])([\s\S]*?)\1\s*;?/i);
       if (qMatch) sqlQuery.value = qMatch[2].replace(/\\n/g,'\n').replace(/\\"/g,'"').replace(/\\\\/g,'\\');
-      const getVal = (k) => (chartInner.match(new RegExp(k+'\\s*=\\s*["\']([^"\']+)["\']', 'i')) || [])[1];
-      representation.value = getVal('representation') || 'barchart';
-      series.value = getVal('series') || '';
-      legends.value = getVal('legends') || '';
-      groupBy.value = getVal('groupBy') || '';
+      const repMatch = chartInner.match(/representation\s*=\s*["']([^"']+)["']/i);
+      representation.value = repMatch ? repMatch[1] : 'barchart';
+
+      const seriesMatch = chartInner.match(/series\s*=\s*["']([^"']+)["']/i);
+      series.value = seriesMatch ? seriesMatch[1] : '';
+
+      const legendsMatch = chartInner.match(/legends\s*=\s*["']([^"']+)["']/i);
+      legends.value = legendsMatch ? legendsMatch[1] : '';
+
+      const groupMatch = chartInner.match(/groupby\s*=\s*["']([^"']+)["']/i);
+      groupBy.value = groupMatch ? groupMatch[1] : '';
 
       const formattingMatch = chartInner.match(/formatting\s*=\s*\{([\s\S]*?)\}/i);
       if (formattingMatch) {
