@@ -134,6 +134,37 @@
                                 <option value="max">max</option>
                             </select>
                         </div>
+
+                        <div class="col-12 mt-3">
+                            <hr>
+                            <h5><i class="fas fa-palette"></i> Pivot Styling Rules</h5>
+                        </div>
+
+                        <!-- Row Styling Section -->
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-label mb-0"><strong>Row Styles</strong></label>
+                                <button id="btnAddRowStyle" type="button" class="btn btn-sm btn-outline-secondary">
+                                    <i class="fas fa-plus"></i> Add Row Style
+                                </button>
+                            </div>
+                            <div id="rowStylesContainer" class="vstack gap-2">
+                                <!-- Dynamic content will go here -->
+                            </div>
+                        </div>
+
+                        <!-- Column Styling Section -->
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center mb-1 mt-3">
+                                <label class="form-label mb-0"><strong>Column Styles</strong></label>
+                                <button id="btnAddColStyle" type="button" class="btn btn-sm btn-outline-secondary">
+                                    <i class="fas fa-plus"></i> Add Column Style
+                                </button>
+                            </div>
+                            <div id="colStylesContainer" class="vstack gap-2">
+                                <!-- Dynamic content will go here -->
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -175,6 +206,11 @@
   let chartBlockIndex = -1;
   // Preserve additional chart properties (e.g., pivot*) that the UI doesn't explicitly edit
   let extraChartProps = {};
+  let filters = [];
+  // --- NEW STATE ---
+  let rowStyles = [];
+  let colStyles = [];
+
 
   const ddlFiles = document.getElementById('ddlFiles');
   const btnLoad = document.getElementById('btnLoad');
@@ -205,6 +241,12 @@
   const btnAddColorPair = document.getElementById('btnAddColorPair');
   representation.addEventListener("change", updatePivotVisibility);
 
+  // --- NEW DOM REFS ---
+  const btnAddRowStyle = document.getElementById('btnAddRowStyle');
+  const rowStylesContainer = document.getElementById('rowStylesContainer');
+  const btnAddColStyle = document.getElementById('btnAddColStyle');
+  const colStylesContainer = document.getElementById('colStylesContainer');
+
   function updatePivotVisibility(){
     try{
       const block = document.getElementById('pivotBlock');
@@ -213,6 +255,105 @@
       block.style.display = show ? '' : 'none';
     } catch(e) { /* noop */ }
   }
+
+  // --- PIVOT STYLING UI ---
+  function renderRowStylesUI() {
+    if (!rowStylesContainer) return;
+    rowStylesContainer.innerHTML = '';
+    rowStyles.forEach((rule, index) => {
+        const item = document.createElement('div');
+        item.className = 'row g-2 align-items-center';
+        item.dataset.index = index;
+        item.innerHTML = `
+            <div class="col-5">
+                <input type="text" class="form-control form-control-sm row-style-match" placeholder="Match (e.g., 'Total')" value="${rule.match || ''}">
+            </div>
+            <div class="col-5">
+                <input type="text" class="form-control form-control-sm row-style-style" placeholder="Style (e.g., 'font-weight:bold')" value="${rule.style || ''}">
+            </div>
+            <div class="col-2 text-end">
+                <button type="button" class="btn btn-sm btn-outline-danger btn-remove-row-style" title="Remove rule">X</button>
+            </div>
+        `;
+        rowStylesContainer.appendChild(item);
+    });
+  }
+
+  function renderColStylesUI() {
+    if (!colStylesContainer) return;
+    colStylesContainer.innerHTML = '';
+    colStyles.forEach((rule, index) => {
+        const item = document.createElement('div');
+        item.className = 'row g-2 align-items-center';
+        item.dataset.index = index;
+        const selBoth = (rule.applyTo || 'both') === 'both' ? 'selected' : '';
+        const selHeader = rule.applyTo === 'header' ? 'selected' : '';
+        const selCells = rule.applyTo === 'cells' ? 'selected' : '';
+
+        item.innerHTML = `
+            <div class="col-4">
+                <input type="text" class="form-control form-control-sm col-style-match" placeholder="Match (e.g., '2011')" value="${rule.match || ''}">
+            </div>
+            <div class="col-4">
+                <input type="text" class="form-control form-control-sm col-style-style" placeholder="Style (e.g., 'background:#eef')" value="${rule.style || ''}">
+            </div>
+            <div class="col-3">
+                <select class="form-select form-select-sm col-style-apply">
+                    <option value="both" ${selBoth}>Header & Cells</option>
+                    <option value="header" ${selHeader}>Header only</option>
+                    <option value="cells" ${selCells}>Cells only</option>
+                </select>
+            </div>
+            <div class="col-1 text-end">
+                <button type="button" class="btn btn-sm btn-outline-danger btn-remove-col-style" title="Remove rule">X</button>
+            </div>
+        `;
+        colStylesContainer.appendChild(item);
+    });
+  }
+
+  function bindPivotStyleEditors() {
+      if(btnAddRowStyle) btnAddRowStyle.addEventListener('click', () => {
+          rowStyles.push({ match: '', style: '' });
+          renderRowStylesUI();
+      });
+      if(btnAddColStyle) btnAddColStyle.addEventListener('click', () => {
+          colStyles.push({ match: '', style: '', applyTo: 'both' });
+          renderColStylesUI();
+      });
+
+      if(rowStylesContainer) rowStylesContainer.addEventListener('click', e => {
+          if (e.target.classList.contains('btn-remove-row-style')) {
+              const index = e.target.closest('.row').dataset.index;
+              rowStyles.splice(index, 1);
+              renderRowStylesUI();
+          }
+      });
+      if(colStylesContainer) colStylesContainer.addEventListener('click', e => {
+          if (e.target.classList.contains('btn-remove-col-style')) {
+              const index = e.target.closest('.row').dataset.index;
+              colStyles.splice(index, 1);
+              renderColStylesUI();
+          }
+      });
+
+      if(rowStylesContainer) rowStylesContainer.addEventListener('input', e => {
+          const index = e.target.closest('.row').dataset.index;
+          if (!rowStyles[index]) return;
+          const rule = rowStyles[index];
+          if (e.target.classList.contains('row-style-match')) rule.match = e.target.value;
+          if (e.target.classList.contains('row-style-style')) rule.style = e.target.value;
+      });
+      if(colStylesContainer) colStylesContainer.addEventListener('input', e => {
+          const index = e.target.closest('.row').dataset.index;
+          if (!colStyles[index]) return;
+          const rule = colStyles[index];
+          if (e.target.classList.contains('col-style-match')) rule.match = e.target.value;
+          if (e.target.classList.contains('col-style-style')) rule.style = e.target.value;
+          if (e.target.classList.contains('col-style-apply')) rule.applyTo = e.target.value;
+      });
+  }
+  bindPivotStyleEditors();
 
   // --- Filters state + UI ---
   let filters = [];
@@ -397,6 +538,11 @@
     series.value = legends.value = groupBy.value = title.value = '';
     filters = [];
     renderFiltersUI();
+    // --- NEW RESET LOGIC ---
+    rowStyles = [];
+    colStyles = [];
+    renderRowStylesUI();
+    renderColStylesUI();
   }
 
   function splitBlocks(th){
@@ -460,14 +606,47 @@
       const ser = chartInner.match(/series\s*=\s*["']([^"']+)["']/i); if (ser) series.value = ser[1];
       const leg = chartInner.match(/legends\s*=\s*["']([^"']+)["']/i); if (leg) legends.value = leg[1];
       const grp = chartInner.match(/groupby\s*=\s*["']([^"']+)["']/i); if (grp) groupBy.value = grp[1];
-      const titleMatch = chartInner.match(/title\s*:\s*["'](.*?)["']/i); if (titleMatch) title.value = titleMatch[1].replace(/\\"/g,'"');
-      const colorsBlock = chartInner.match(/valueColors\s*:\s*\{([\s\S]*?)\}/i);
-      if (colorsBlock){
-        colorsBlock[1].split(/\r?\n/).map(l=>l.trim()).forEach(l=>{
-          const m = l.match(/["']([^"']+)["']\s*:\s*["']([^"']+)["']/);
-          if (m) addValueColorPair(m[1], m[2]);
-        });
+
+      // --- NEW: Unified formatting parser ---
+      const formattingMatch = chartInner.match(/formatting\s*=\s*\{([\s\S]*?)\}/i);
+      if (formattingMatch) {
+          const formattingContent = formattingMatch[1];
+          const unescape = s => s.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+
+          const titleMatch = formattingContent.match(/title\s*:\s*["'](.*?)["']/i);
+          if (titleMatch) title.value = unescape(titleMatch[1]);
+
+          const colorsBlock = formattingContent.match(/valueColors\s*:\s*\{([\s\S]*?)\}/i);
+          if (colorsBlock){
+              colorsBlock[1].split(/\r?\n/).map(l=>l.trim()).forEach(l=>{
+                  const m = l.match(/["']([^"']+)["']\s*:\s*["']([^"']+)["']/);
+                  if (m) addValueColorPair(m[1], m[2]);
+              });
+          }
+
+          const rowStylesMatch = formattingContent.match(/rowStyles\s*:\s*\[([\s\S]*?)\]/);
+          if (rowStylesMatch) {
+              for (const m of rowStylesMatch[1].matchAll(/\{([\s\S]*?)\}/g)) {
+                  const rule = m[1];
+                  const match = (rule.match(/match\s*:\s*"((?:\\.|[^"\\])*)"/) || [])[1];
+                  const style = (rule.match(/style\s*:\s*"((?:\\.|[^"\\])*)"/) || [])[1];
+                  if (match != null && style != null) rowStyles.push({ match: unescape(match), style: unescape(style) });
+              }
+          }
+
+          const colStylesMatch = formattingContent.match(/colStyles\s*:\s*\[([\s\S]*?)\]/);
+          if (colStylesMatch) {
+              for (const m of colStylesMatch[1].matchAll(/\{([\s\S]*?)\}/g)) {
+                  const rule = m[1];
+                  const match = (rule.match(/match\s*:\s*"((?:\\.|[^"\\])*)"/) || [])[1];
+                  const style = (rule.match(/style\s*:\s*"((?:\\.|[^"\\])*)"/) || [])[1];
+                  const applyTo = (rule.match(/applyTo\s*:\s*"((?:\\.|[^"\\])*)"/) || [])[1] || 'both';
+                  if (match != null && style != null) colStyles.push({ match: unescape(match), style: unescape(style), applyTo: unescape(applyTo) });
+              }
+          }
       }
+      renderRowStylesUI();
+      renderColStylesUI();
 
       // Collect and preserve pivot* and other unknown chart props (key="value"; form)
       extraChartProps = {};
@@ -508,14 +687,33 @@
       const col = (p.querySelector('.color-input')?.value || '').trim();
       if (key && col) lines.push('      "'+key+'": "'+col+'"');
     });
+
     const fmt = [];
     if (title.value.trim()) fmt.push('    title: "'+escapeQuotes(title.value.trim())+'"');
     if (lines.length)       fmt.push('    valueColors: {\n'+lines.join(',\n')+'\n    }');
+
+    // --- NEW: Serialize pivot styles ---
+    if (rowStyles.length > 0) {
+        const styleLines = rowStyles
+            .filter(r => r.match || r.style)
+            .map(r => `      { match: "${escapeQuotes(r.match)}", style: "${escapeQuotes(r.style)}" }`)
+            .join(',\n');
+        if(styleLines) fmt.push(`    rowStyles: [\n${styleLines}\n    ]`);
+    }
+    if (colStyles.length > 0) {
+        const styleLines = colStyles
+            .filter(r => r.match || r.style)
+            .map(r => {
+                const applyToAttr = (r.applyTo && r.applyTo !== 'both') ? `, applyTo: "${r.applyTo}"` : '';
+                return `      { match: "${escapeQuotes(r.match)}", style: "${escapeQuotes(r.style)}"${applyToAttr} }`;
+            })
+            .join(',\n');
+        if(styleLines) fmt.push(`    colStyles: [\n${styleLines}\n    ]`);
+    }
+
     const rep = (representation.value || '').trim() || 'barchart';
-    // Tartsuk meg a valós sortöréseket, ne tegyünk \n-t
     const q = (sqlQuery.value || '').replace(/\r/g,'');
 
-    // Update extraChartProps from Pivot UI
     if (pivotEnabled && pivotEnabled.checked){
       if (!extraChartProps) extraChartProps = {};
       extraChartProps['pivotRow'] = (pivotRow?.value||'').trim();
@@ -529,7 +727,6 @@
       delete extraChartProps['pivotAgg'];
     }
 
-    // Emit extra chart properties that we preserved (e.g., pivot*)
     const extra = [];
     Object.keys(extraChartProps || {}).forEach(k => {
       const v = extraChartProps[k];
@@ -558,7 +755,6 @@ ${fmt.length ? fmt.join(',\n') : '    '}
     push('type', f.type || 'dropdown');
     push('param', f.param || '');
     push('label', f.label || '');
-    // Keep real newlines in query
     const qf = (f.query || '').replace(/\r/g,'');
     kv.push('  query="\n' + escapeQuotes(qf) + '\n  ";');
     push('valueField', f.valueField || '');
@@ -572,7 +768,6 @@ ${fmt.length ? fmt.join(',\n') : '    '}
     const newChart = buildChartBlock();
     const newFilters = (filters && filters.length) ? filters.map(buildFilterBlock).join('\n\n') : '';
 
-    // 1) Update or insert meta comment lines from inputs
     const setMeta = (src, key, value) => {
       const clean = (value || '').toString().trim();
       const rx = new RegExp(`<!--\\s*${key}\\s*:\\s*[\\s\\S]*?-->`, 'i');
@@ -585,19 +780,14 @@ ${fmt.length ? fmt.join(',\n') : '    '}
     };
 
     let withMeta = originalThml || '';
-    // Prepend in reverse order so final order becomes: name, description, owner
     withMeta = setMeta(withMeta, 'meta-owner', owner.value);
     withMeta = setMeta(withMeta, 'meta-description', description.value);
     withMeta = setMeta(withMeta, 'meta-name', metricName.value);
 
-    // Ensure a blank line between meta block and first component
     withMeta = withMeta.replace(/^(<!--[^]*?-->)\s*(?=\{\{|$)/, (m)=> m.replace(/\s*$/, '\n\n'));
 
-    // 2) Remove existing filter and chart blocks, then insert new filters + chart
     let final = withMeta;
-    // Remove filter blocks
     originalBlocks.filter(b => b.isFilter).forEach(b => { final = final.replace(b.full, ''); });
-    // Remove existing chart (we will append a fresh one)
     if (chartBlockIndex >= 0) {
       final = final.replace(originalBlocks[chartBlockIndex].full, '');
     }
@@ -613,7 +803,6 @@ ${fmt.length ? fmt.join(',\n') : '    '}
     const thtml = generateThtml();
     const url = '@Url.Action("RenderPreview","Editor")';
 
-    // Gyűjtsük ki a meglévő előnézetből a szűrők aktuális értékeit
     const framePrev = document.getElementById('previewFrame');
     const prevDoc = framePrev.contentDocument || framePrev.contentWindow?.document;
     const formVals = {};
@@ -626,7 +815,6 @@ ${fmt.length ? fmt.join(',\n') : '    '}
     const body = new URLSearchParams();
     body.set('__RequestVerificationToken', token);
     body.set('thtmlCode', thtml);
-    // Adjuk hozzá a paramétereket a POST-hoz
     Object.keys(formVals).forEach(k => body.set(k, formVals[k] ?? ''));
 
     fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' }, body: body.toString() })
@@ -652,7 +840,6 @@ ${fmt.length ? fmt.join(',\n') : '    '}
           const s = doc.createElement('script');
           s.src = src; s.onload = res; s.onerror = () => rej(src); doc.head.appendChild(s);
         })), Promise.resolve()).then(() => {
-          // Build a simple tab UI (Metric | THTML)
           doc.body.innerHTML = `
             <div class="container-fluid">
               <ul class="nav nav-tabs" id="previewTabs">
@@ -666,20 +853,17 @@ ${fmt.length ? fmt.join(',\n') : '    '}
               </div>
             </div>`;
 
-          // Insert rendered HTML and generated thtml
           const paneMetric = doc.getElementById('paneMetric');
           const paneThtml = doc.getElementById('paneThtml');
           paneMetric.innerHTML = html;
           paneThtml.textContent = thtml;
 
-          // Execute inline scripts inside the Metric pane (innerHTML does not run them)
           Array.from(paneMetric.querySelectorAll('script')).forEach(old => {
             const s = doc.createElement('script');
             if (old.textContent) s.text = old.textContent;
             old.parentNode.replaceChild(s, old);
           });
 
-          // Tabs behavior without Bootstrap JS
           const linkMetric = doc.getElementById('tabMetric');
           const linkThtml = doc.getElementById('tabThtml');
           const activate = (name) => {
@@ -695,10 +879,8 @@ ${fmt.length ? fmt.join(',\n') : '    '}
           linkThtml.addEventListener('click', (e)=>{ e.preventDefault(); activate('thtml'); });
           activate('metric');
 
-          // Auto-refresh on filter change (inside Metric pane)
           Array.from(paneMetric.querySelectorAll('.filter-control')).forEach(el => {
             el.addEventListener('change', () => {
-              // jelezzünk a szülőnek
               try { frame.contentWindow.parent.postMessage({ type: 'metric-editor-filter-change' }, '*'); } catch(e) { /* no-op */ }
             });
           });
@@ -787,9 +969,7 @@ ${fmt.length ? fmt.join(',\n') : '    '}
         .then(data => {
           if (!data.success) throw new Error(data.message || 'Delete failed');
           alert(data.message || 'Deleted');
-          // Remove from dropdown
           [...ddlFiles.options].forEach(o => { if (o.value.toLowerCase() === name.toLowerCase()) o.remove(); });
-          // Reset form and preview
           ddlFiles.value=''; fileNameInput.value=''; originalThml=''; originalBlocks=[]; chartBlockIndex=-1; resetForm();
           const frame = document.getElementById('previewFrame');
           const doc = frame.contentDocument || frame.contentWindow.document; if (doc.body) doc.body.innerHTML = '';
