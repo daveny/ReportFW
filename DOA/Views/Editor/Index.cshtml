@@ -518,6 +518,7 @@
 
     const chartInner = (chartBlockIndex >= 0) ? originalBlocks[chartBlockIndex].inner : '';
     if (chartInner){
+      alert('1. chartInner:\n' + chartInner);
       success = true;
       const qMatch = chartInner.match(/query\s*=\s*(["'])([\s\S]*?)\1\s*;?/i);
       if (qMatch) sqlQuery.value = qMatch[2].replace(/\\n/g,'\n').replace(/\\"/g,'"').replace(/\\\\/g,'\\');
@@ -534,8 +535,11 @@
       groupBy.value = groupMatch ? groupMatch[1] : '';
 
       const formattingMatch = chartInner.match(/formatting\s*=\s*\{([\s\S]*?)\}/i);
+      alert('2. formattingMatch:\n' + formattingMatch);
+
       if (formattingMatch && formattingMatch[1]) {
           const content = formattingMatch[1];
+          alert('3. content:\n' + content);
           const unescape = s => s ? s.replace(/\\"/g, '"').replace(/\\\\/g, '\\') : '';
 
           const titleMatch = content.match(/title\s*:\s*["'](.*?)["']/i);
@@ -547,6 +551,8 @@
           }
 
           const rowStylesMatch = content.match(/rowStyles\s*:\s*\[([\s\S]*?)\]/);
+          alert('4. rowStylesMatch:\n' + rowStylesMatch);
+
           if (rowStylesMatch && rowStylesMatch[1]) {
               for (const m of rowStylesMatch[1].matchAll(/\{([\s\S]*?)\}/g)) {
                   const ruleText = m[1];
@@ -556,6 +562,8 @@
                   if (match != null && style != null) rowStyles.push({ match: unescape(match), style: unescape(style) });
               }
           }
+          alert('5. Parsed rowStyles count: ' + rowStyles.length);
+
           const colStylesMatch = content.match(/colStyles\s*:\s*\[([\s\S]*?)\]/);
           if (colStylesMatch && colStylesMatch[1]) {
               for (const m of colStylesMatch[1].matchAll(/\{([\s\S]*?)\}/g)) {
