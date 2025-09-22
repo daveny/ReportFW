@@ -487,6 +487,7 @@
 
   function parseAndLoad(thtml){
     originalThml = thtml || '';
+    window.debug_originalThml = originalThml; // DEBUG LINE
     resetForm();
     splitBlocks(originalThml);
     if (!originalThml.trim()) return;
