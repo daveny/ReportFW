@@ -17,10 +17,9 @@ def run_debug_script(page: Page):
     page.get_by_label("Meglévő metrika betöltése").select_option("metric01_pivot_color.thtml")
     page.get_by_role("button", name="Betöltés").click()
 
-    print("Waiting for preview to load...")
-    preview_frame = page.frame_locator("#previewFrame")
-    expect(preview_frame.get_by_role("tab", name="Metric")).to_be_visible(timeout=15000)
-    print("Metric loaded. Now extracting debug info...")
+    print("Waiting for 2 seconds to allow parsing logic to run...")
+    page.wait_for_timeout(2000) # Wait for 2 seconds
+    print("Now extracting debug info...")
 
     # This function will be executed in the browser's context
     # It mimics the logic from the application's JavaScript to get the variable states.
