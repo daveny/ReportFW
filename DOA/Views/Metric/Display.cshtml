@@ -35,6 +35,9 @@
 @section scripts {
     <script>
     $(document).ready(function () {
+        // Initialize DataTables on the metric table
+        $('#metricDataTable').DataTable();
+
         // Automatikusan elküldi az űrlapot, ha egy szűrő (pl. legördülő) értéke megváltozik
         $('.filter-panel').on('change', 'select, input[type=date], input[type=checkbox]', function() {
             $('#metricForm').submit();

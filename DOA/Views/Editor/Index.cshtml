@@ -544,14 +544,20 @@
 
           const colorsBlock = content.match(/valueColors\s*:\s*\{([\s\S]*?)\}/i);
           if (colorsBlock && colorsBlock[1]){
-              for (const m of colorsBlock[1].matchAll(/["']([^"']+)["']\s*:\s*["']([^"']+)["']/g)) addValueColorPair(m[1], m[2]);
+              const colorRegex = /["']([^"']+)["']\s*:\s*["']([^"']+)["']/g;
+              let colorMatch;
+              while ((colorMatch = colorRegex.exec(colorsBlock[1])) !== null) {
+                  addValueColorPair(colorMatch[1], colorMatch[2]);
+              }
           }
 
           const rowStylesMatch = content.match(/rowStyles\s*:\s*(\[[\s\S]*?\])/);
           if (rowStylesMatch && rowStylesMatch[1]) {
               const rulesContent = rowStylesMatch[1].slice(1, -1);
-              for (const m of rulesContent.matchAll(/\{([\s\S]*?)\}/g)) {
-                  const ruleText = m[1];
+              const ruleRegex = /\{([\s\S]*?)\}/g;
+              let ruleMatch;
+              while ((ruleMatch = ruleRegex.exec(rulesContent)) !== null) {
+                  const ruleText = ruleMatch[1];
                   if (!ruleText) continue;
                   const match = (ruleText.match(/match\s*:\s*"((?:\\.|[^"\\])*)"/) || [])[1];
                   const style = (ruleText.match(/style\s*:\s*"((?:\\.|[^"\\])*)"/) || [])[1];
@@ -561,8 +567,10 @@
           const colStylesMatch = content.match(/colStyles\s*:\s*(\[[\s\S]*?\])/);
           if (colStylesMatch && colStylesMatch[1]) {
               const rulesContent = colStylesMatch[1].slice(1, -1);
-              for (const m of rulesContent.matchAll(/\{([\s\S]*?)\}/g)) {
-                  const ruleText = m[1];
+              const ruleRegex = /\{([\s\S]*?)\}/g;
+              let ruleMatch;
+              while ((ruleMatch = ruleRegex.exec(rulesContent)) !== null) {
+                  const ruleText = ruleMatch[1];
                   if (!ruleText) continue;
                   const match = (ruleText.match(/match\s*:\s*"((?:\\.|[^"\\])*)"/) || [])[1];
                   const style = (ruleText.match(/style\s*:\s*"((?:\\.|[^"\\])*)"/) || [])[1];
