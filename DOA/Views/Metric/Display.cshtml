@@ -18,7 +18,7 @@
 
     <hr />
 
-    <!-- A RenderedMetric már tartalmazza a formot és a szűrőpanelt -->
+    <!-- The RenderedMetric already contains the form and filter panel -->
     @Html.Raw(ViewBag.RenderedMetric)
 
 </div>
@@ -26,7 +26,7 @@
 @section styles {
     <style>
         .metric-content-full .chart-container,
-        .metric-content-full div[style*='height:400px'] { /* A thtml-ben definiált magasságot célozzuk */
+        .metric-content-full div[style*='height:400px'] { /* Target the height defined in the thtml */
             height: 60vh !important;
         }
     </style>
@@ -35,15 +35,18 @@
 @section scripts {
     <script>
     $(document).ready(function () {
-        // Automatikusan elküldi az űrlapot, ha egy szűrő (pl. legördülő) értéke megváltozik
+        // Initialize DataTables on the metric table
+        $('#metricDataTable').DataTable();
+
+        // Automatically submit the form when a filter (e.g., dropdown) changes
         $('.filter-panel').on('change', 'select, input[type=date], input[type=checkbox]', function() {
             $('#metricForm').submit();
         });
 
-        // A szöveges és szám beviteli mezőknél csak Enter leütésére küldje el
+        // For text and number inputs, submit only on Enter
         $('.filter-panel').on('keypress', 'input[type=text], input[type=number]', function(e) {
             if (e.which === 13) { // Enter key
-                e.preventDefault(); // Megakadályozza az alapértelmezett viselkedést
+                e.preventDefault(); // Prevent default behaviour
                 $('#metricForm').submit();
             }
         });
