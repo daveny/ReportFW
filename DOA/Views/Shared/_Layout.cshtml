@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@ViewBag.Title - My ASP.NET Application</title>
 
-    <!-- CSS hivatkozások -->
+    <!-- CSS references -->
     @Styles.Render("~/Content/css")
     <link href="~/Content/datatables.min.css" rel="stylesheet" />
     <link href="~/Content/bootstrap-datepicker.min.css" rel="stylesheet" />
@@ -33,7 +33,7 @@
                     <li>@Html.ActionLink("Home", "Index", "Home", new { area = "" }, new { @class = "nav-link" })</li>
                     <li>@Html.ActionLink("Reports", "List", "Report", new { area = "" }, new { @class = "nav-link" })</li>
 
-                    <!-- Metrics legördülő menü -->
+                    <!-- Metrics dropdown -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMetrics" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             Metrics
@@ -42,7 +42,7 @@
                             <li>@Html.ActionLink("Metric Library", "Library", "Metric", new { area = "" }, new { @class = "dropdown-item" })</li>
                             <li>@Html.ActionLink("My Metrics", "MyMetrics", "Metric", new { area = "" }, new { @class = "dropdown-item" })</li>
                             <li><hr class="dropdown-divider"></li>
-                            <li>@Html.ActionLink("Új metrika (.thtml Editor)", "Index", "Editor", new { area = "" }, new { @class = "dropdown-item" })</li>
+                            <li>@Html.ActionLink("New Metric (.thtml editor)", "Index", "Editor", new { area = "" }, new { @class = "dropdown-item" })</li>
                         </ul>
                     </li>
 

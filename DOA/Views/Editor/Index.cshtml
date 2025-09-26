@@ -17,9 +17,9 @@
     <div class="card mb-3">
         <div class="card-body row g-3 align-items-end">
             <div class="col-md-5">
-                <label class="form-label" for="ddlFiles"><strong>Meglévő metrika betöltése</strong></label>
+                <label class="form-label" for="ddlFiles"><strong>Load existing metric</strong></label>
                 <select id="ddlFiles" class="form-select">
-                    <option value="">-- Válassz egy fájlt --</option>
+                    <option value="">-- Select a file --</option>
                     @foreach (var f in files)
                     {
                         <option value="@f">@f</option>
@@ -27,15 +27,15 @@
                 </select>
             </div>
             <div class="col-md-2">
-                <button id="btnLoad" class="btn btn-primary w-100" type="button"><i class="fas fa-upload"></i> Betöltés</button>
+                <button id="btnLoad" class="btn btn-primary w-100" type="button"><i class="fas fa-upload"></i> Load</button>
             </div>
             <div class="col-md-5">
-                <label class="form-label" for="txtFileName"><strong>Mentés másként vagy új metrika neve</strong></label>
+                <label class="form-label" for="txtFileName"><strong>Save as / new metric name</strong></label>
 <div class="input-group">
-    <input id="txtFileName" class="form-control" placeholder="pl. uj_metrika_neve" />
-    <button id="btnNew" class="btn btn-outline-secondary" type="button" title="Új metrika létrehozása"><i class="fas fa-plus"></i> Új</button>
-    <button id="btnSave" class="btn btn-success" type="button" title="Mentés"><i class="fas fa-save"></i> Mentés</button>
-    <button id="btnDelete" class="btn btn-outline-danger" type="button" title="Törlés"><i class="fas fa-trash"></i></button>
+    <input id="txtFileName" class="form-control" placeholder="e.g. new_metric_name" />
+    <button id="btnNew" class="btn btn-outline-secondary" type="button" title="Create new metric"><i class="fas fa-plus"></i> New</button>
+    <button id="btnSave" class="btn btn-success" type="button" title="Save"><i class="fas fa-save"></i> Save</button>
+    <button id="btnDelete" class="btn btn-outline-danger" type="button" title="Delete"><i class="fas fa-trash"></i></button>
 </div>
             </div>
         </div>
@@ -43,19 +43,19 @@
     <div class="row g-3">
         <div class="col-lg-5 d-flex flex-column">
             <div class="card mb-3">
-                <div class="card-header">Metaadatok</div>
+                <div class="card-header">Metadata</div>
                 <div class="card-body row g-3">
                     <div class="col-md-6">
                         <label class="form-label">Metric Name</label>
-                        <input id="metricName" class="form-control" placeholder="Active Users" />
+                        <input id="metricName" class="form-control" placeholder="Metric name" />
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Owner</label>
-                        <input id="owner" class="form-control" placeholder="David Nagy" />
+                        <input id="owner" class="form-control" placeholder="Metric owner" />
                     </div>
                     <div class="col-md-12">
                         <label class="form-label">Description</label>
-                        <textarea id="description" class="form-control" rows="4" placeholder="Shows sales totals from FR, DE, CA, and AU..."></textarea>
+                        <textarea id="description" class="form-control" rows="4" placeholder="Describe the metric..."></textarea>
                     </div>
                 </div>
             </div>
@@ -63,7 +63,7 @@
             <div class="card mb-3 flex-grow-1 sql-card">
                 <div class="card-header">SQL Query</div>
                 <div class="card-body">
-                    <textarea id="sqlQuery" class="form-control font-monospace" rows="12" placeholder="SELECT ... FROM ... WHERE ... GROUP BY ..."></textarea>
+                    <textarea id="sqlQuery" class="form-control font-monospace" rows="12" placeholder="Enter SQL query here"></textarea>
                 </div>
             </div>
 
@@ -81,10 +81,10 @@
             </div>
 
             <div class="card mb-3">
-                <div class="card-header">Megjelenítés</div>
+                <div class="card-header">Display</div>
                 <div class="card-body row g-3">
                     <div class="col-md-4">
-                        <label class="form-label">Típus</label>
+                        <label class="form-label">Type</label>
                         <select id="representation" class="form-select">
                             <option value="table">Table</option>
                             <option value="barchart" selected>Bar Chart</option>
@@ -93,37 +93,37 @@
                         </select>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">Érték oszlop (series)</label>
-                        <input id="series" class="form-control" placeholder="TotalSales" />
+                        <label class="form-label">Value column (series)</label>
+                        <input id="series" class="form-control" placeholder="Series column name" />
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">Kategória (legends)</label>
-                        <input id="legends" class="form-control" placeholder="OrderYear" />
+                        <label class="form-label">Category (legends)</label>
+                        <input id="legends" class="form-control" placeholder="Legend column name" />
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label">Csoportosítás (groupBy)</label>
-                        <input id="groupBy" class="form-control" placeholder="CountryRegionCode" />
+                        <label class="form-label">Group by (groupBy)</label>
+                        <input id="groupBy" class="form-control" placeholder="Group by column" />
                     </div>
                     <div id="pivotBlock" class="row g-3" style="display:none;">
                         <div class="col-12">
                             <hr />
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" id="pivotEnabled">
-                                <label class="form-check-label" for="pivotEnabled">Pivot engedélyezése</label>
+                                <label class="form-check-label" for="pivotEnabled">Enable pivot</label>
                             </div>
                         </div>
                         <div id="pivotCoreControlsContainer" class="row g-3">
                             <div class="col-md-3">
                                 <label class="form-label">pivotRow</label>
-                                <input id="pivotRow" class="form-control" placeholder="CountryRegionCode" />
+                                <input id="pivotRow" class="form-control" placeholder="Pivot row field" />
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">pivotCol</label>
-                                <input id="pivotCol" class="form-control" placeholder="OrderYear" />
+                                <input id="pivotCol" class="form-control" placeholder="Pivot column field" />
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">pivotValue</label>
-                                <input id="pivotValue" class="form-control" placeholder="TotalSales" />
+                                <input id="pivotValue" class="form-control" placeholder="Pivot value field" />
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">pivotAgg</label>
@@ -160,15 +160,15 @@
                 </div>
             </div>
             <div class="card mb-3">
-                <div class="card-header">Formázás</div>
+                <div class="card-header">Formatting</div>
                 <div class="card-body">
                     <div class="mb-3">
-                        <label class="form-label">Cím</label>
-                        <input id="title" class="form-control" placeholder="Revenue by Country and Year" />
+                        <label class="form-label">Title</label>
+                        <input id="title" class="form-control" placeholder="Chart title" />
                     </div>
                     <label class="form-label d-flex align-items-center justify-content-between">
-                        Érték alapú színezés (valueColors)
-                        <button id="btnAddColorPair" class="btn btn-sm btn-outline-secondary" type="button">Szín-érték pár hozzáadása</button>
+                        Value-based coloring (valueColors)
+                        <button id="btnAddColorPair" class="btn btn-sm btn-outline-secondary" type="button">Add color/value pair</button>
                     </label>
                     <div id="valueColorPairs" class="vstack gap-2"></div>
                 </div>
@@ -178,8 +178,8 @@
         <div class="col-lg-7 d-flex flex-column gap-3">
             <div class="card flex-grow-1">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <span><i class="fas fa-eye"></i> -lő előnézet</span>
-                    <button id="btnPreview" class="btn btn-sm btn-primary" type="button"><i class="fas fa-sync-alt"></i> Előnézet frissítése</button>
+                    <span><i class="fas fa-eye"></i> Live preview</span>
+                    <button id="btnPreview" class="btn btn-sm btn-primary" type="button"><i class="fas fa-sync-alt"></i> Refresh preview</button>
                 </div>
                 <div class="card-body">
                     <iframe id="previewFrame" style="width:100%; height: 100%; border:1px solid #e5e5e5; border-radius:8px;"></iframe>
@@ -454,7 +454,7 @@
     const row = document.createElement('div');
     row.className = 'value-color-pair row g-2 align-items-center';
     row.innerHTML = `
-      <div class="col-6"><input type="text" class="form-control value-input" placeholder="érték (pl. FR)" value="${val||''}"></div>
+      <div class="col-6"><input type="text" class="form-control value-input" placeholder="Value (e.g., FR)" value="${val||''}"></div>
       <div class="col-4"><input type="color" class="form-control form-control-color color-input" value="${col||'#000000'}"></div>
       <div class="col-2 text-end"><button type="button" class="btn btn-outline-danger btn-sm btn-remove">X</button></div>`;
     row.querySelector('.btn-remove').addEventListener('click', () => row.remove());
@@ -605,7 +605,7 @@
       if (pivotEnabled) pivotEnabled.checked = !!(pr && pc);
     }
     updatePivotVisibility();
-    if(!success) { throw new Error("A .thtml fájl formátuma nem megfelelő. Nem sikerült metaadatokat vagy chart blokkot találni."); }
+    if(!success) { throw new Error("Invalid .thtml format. Could not find metadata or chart block."); }
   }
 
   function buildChartBlock(){
@@ -752,12 +752,12 @@
 
   btnLoad.addEventListener('click', () => {
     const name = ddlFiles.value;
-    if (!name){ alert('Válassz egy metrikát!'); return; }
+    if (!name){ alert('Select a metric!'); return; }
     fetch('@Url.Action("LoadMetric","Editor")?fileName=' + encodeURIComponent(name))
       .then(r => r.ok ? r.text() : Promise.reject(r.status + ' ' + r.statusText))
       .then(txt => {
           fileNameInput.value = name;
-          try { parseAndLoad(txt); renderPreview(); } catch(e) { alert('Hiba a fájl feldolgozása közben: ' + e.message); }
+          try { parseAndLoad(txt); renderPreview(); } catch(e) { alert('Error while processing the file: ' + e.message); }
       })
       .catch(err => alert('Load error: ' + err));
   });
@@ -775,7 +775,7 @@
   btnSave.addEventListener('click', () => {
     const thtml = generateThtml();
     let name = (fileNameInput.value || '').trim();
-    if (!name){ alert('Adj meg fájlnevet (.thtml)!'); return; }
+    if (!name){ alert('Please provide a file name (.thtml)!'); return; }
     if (!/\.thtml$/i.test(name)) name += '.thtml';
     const body = new URLSearchParams();
     body.set('__RequestVerificationToken', token);
@@ -797,9 +797,9 @@
   if (btnDelete){
     btnDelete.addEventListener('click', () => {
       let name = (fileNameInput.value || ddlFiles.value || '').trim();
-      if (!name){ alert('Nincs kiválasztott fájl.'); return; }
+      if (!name){ alert('No file selected.'); return; }
       if (!/\.thtml$/i.test(name)) name += '.thtml';
-      if (!confirm('Biztosan törlöd a metrikát: ' + name + ' ?')) return;
+      if (!confirm('Are you sure you want to delete the metric: ' + name + '?')) return;
       const body = new URLSearchParams();
       body.set('__RequestVerificationToken', token);
       body.set('fileName', name);
@@ -821,14 +821,14 @@
     </script>
     <style>
         .col-lg-7.d-flex > .card {
-            height: 85vh; /* Magasság a jobb kihasználtságért */
+            height: 85vh; /* Height optimized for better usage */
         }
 
         #previewFrame {
             min-height: 400px;
         }
 
-        /* Stílusok az SQL panel magasságának növeléséhez */
+        /* Styles to increase the SQL panel height */
         .sql-card {
             display: flex;
             flex-direction: column;
@@ -837,12 +837,12 @@
             .sql-card .card-body {
                 flex-grow: 1;
                 display: flex;
-                padding: 0; /* Eltávolítjuk a belső paddinget, hogy a textarea kitölthesse */
+                padding: 0; /* Remove inner padding so the textarea can fill the space */
             }
 
         #sqlQuery {
             flex-grow: 1;
-            border: 0; /* Eltávolítjuk a keretet, mert a card-body már keretezi */
+            border: 0; /* Remove the border because the card body already frames it */
             resize: vertical;
             border-radius: var(--bs-card-inner-border-radius);
             padding: var(--bs-card-cap-padding-y) var(--bs-card-cap-padding-x);
