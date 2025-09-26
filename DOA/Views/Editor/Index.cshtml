@@ -724,12 +724,30 @@
           linkMetric.addEventListener('click', (e)=>{ e.preventDefault(); activate('metric'); });
           linkThtml.addEventListener('click', (e)=>{ e.preventDefault(); activate('thtml'); });
           activate('metric');
+          setTimeout(() => initPreviewDataTables({ notify: false }), 0);
           Array.from(paneMetric.querySelectorAll('.filter-control')).forEach(el => {
             el.addEventListener('change', () => { try { frame.contentWindow.parent.postMessage({ type: 'metric-editor-filter-change' }, '*'); } catch(e) {} });
           });
         }).catch(src => alert('Preview script load error: ' + src));
       })
       .catch(err => alert('Preview error: ' + err));
+  }
+
+
+  function initPreviewDataTables({ notify = false } = {}) {
+    const frame = document.getElementById('previewFrame');
+    const frameWindow = frame?.contentWindow;
+    const frameDoc = frame?.contentDocument || frameWindow?.document;
+    if (!frameDoc || !frameWindow) { if (notify) alert('Preview iframe is not ready.'); return false; }
+    const table = frameDoc.querySelector('table');
+    if (!table) { if (notify) alert('No table found in the preview.'); return false; }
+    const frame$ = frameWindow?.jQuery || window.jQuery;
+    if (!frame$ || !frame$.fn || !frame$.fn.DataTable) { if (notify) alert('DataTables plugin is not available in the preview.'); return false; }
+    if (frame$.fn.DataTable.isDataTable(table)) {
+      frame$(table).DataTable().destroy();
+    }
+    frame$(table).DataTable();
+    return true;
   }
 
   btnLoad.addEventListener('click', () => {
