@@ -440,6 +440,37 @@
 
   function escapeQuotes(s){ return (s||'').replace(/\\/g,'\\\\').replace(/"/g,'\\"'); }
 
+  function extractFormattingContent(src){
+    const match = /formatting\s*=\s*\{/i.exec(src);
+    if (!match) return null;
+    const startIndex = src.indexOf('{', match.index);
+    if (startIndex < 0) return null;
+    let depth = 1;
+    let i = startIndex + 1;
+    const len = src.length;
+    let inString = false;
+    let quote = '';
+    while (i < len) {
+      const ch = src[i];
+      if (inString) {
+        if (ch === '\\' && i + 1 < len) { i += 2; continue; }
+        if (ch === quote) inString = false;
+      } else {
+        if (ch === '"' || ch === '\'') {
+          inString = true;
+          quote = ch;
+        } else if (ch === '{') {
+          depth++;
+        } else if (ch === '}') {
+          depth--;
+          if (depth === 0) return src.slice(startIndex + 1, i);
+        }
+      }
+      i++;
+    }
+    return null;
+  }
+
   (function removeBackslashNTextNodes(){
     const walk = (el) => {
       for (const n of Array.from(el.childNodes)){
@@ -534,9 +565,11 @@
       const groupMatch = chartInner.match(/groupby\s*=\s*["']([^"']+)["']/i);
       groupBy.value = groupMatch ? groupMatch[1] : '';
 
-      const formattingMatch = chartInner.match(/formatting\s*=\s*\{([\s\S]*?)\}/i);
-      if (formattingMatch && formattingMatch[1]) {
-          const content = formattingMatch[1];
+      rowStyles = [];
+      colStyles = [];
+      const formattingContent = extractFormattingContent(chartInner);
+      if (formattingContent != null) {
+          const content = formattingContent;
           const unescape = s => s ? s.replace(/\\"/g, '"').replace(/\\\\/g, '\\') : '';
 
           const titleMatch = content.match(/title\s*:\s*["'](.*?)["']/i);
@@ -564,6 +597,7 @@
                   if (match != null && style != null) rowStyles.push({ match: unescape(match), style: unescape(style) });
               }
           }
+
           const colStylesMatch = content.match(/colStyles\s*:\s*(\[[\s\S]*?\])/);
           if (colStylesMatch && colStylesMatch[1]) {
               const rulesContent = colStylesMatch[1].slice(1, -1);
@@ -579,6 +613,7 @@
               }
           }
       }
+
       renderRowStylesUI();
       renderColStylesUI();
 
@@ -863,3 +898,4 @@
         #sqlQuery { height: auto !important; min-height: 12em; resize: vertical; }
     </style>
 }
+
