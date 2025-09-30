@@ -537,11 +537,16 @@
     filters = [];
     originalBlocks.filter(b => b.isFilter).forEach(b => {
       const obj = newFilterTemplate();
-      for (const line of b.inner.split(/\r?\n/).map(x=>x.trim()).filter(Boolean)){
-        const m = line.match(/^(\w+)\s*=\s*"([\s\S]*?)"\s*;?$/);
-        if (m) {
-            const key = m[1]; const val = m[2].replace(/\\n/g,'\n').replace(/\\"/g,'"').replace(/\\\\/g,'\\');
-            if (key in obj || key === 'representation') obj[key] = val;
+      const kvRegex = /(\w+)\s*=\s*"([\s\S]*?)"\s*;?/g;
+      let kvMatch;
+      while ((kvMatch = kvRegex.exec(b.inner)) !== null){
+        const key = kvMatch[1];
+        const rawVal = kvMatch[2]
+          .replace(/\\n/g,'\n')
+          .replace(/\\"/g,'"')
+          .replace(/\\\\/g,'\\');
+        if (key in obj || key === 'representation'){
+          obj[key] = rawVal;
         }
       }
       filters.push(obj);
@@ -898,4 +903,3 @@
         #sqlQuery { height: auto !important; min-height: 12em; resize: vertical; }
     </style>
 }
-
