@@ -36,6 +36,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Web" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -51,6 +52,7 @@
     <Compile Include="Helpers\DebugHelper.cs" />
     <Compile Include="Helpers\FormatParser.cs" />
     <Compile Include="Helpers\InstructionParser.cs" />
+    <Compile Include="Helpers\ManagedSegmentHelper.cs" />
     <Compile Include="Helpers\Interfaces.cs" />
     <Compile Include="Helpers\SqlDataService.cs" />
     <Compile Include="Helpers\TableRenderer.cs" />
@@ -62,4 +64,4 @@
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-</Project>
+</Project>

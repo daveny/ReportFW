@@ -70,9 +70,14 @@
             <div class="card mb-3" id="filtersCard">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <span>Filters</span>
-                    <button id="btnAddFilter" type="button" class="btn btn-sm btn-outline-primary">
-                        <i class="fas fa-plus"></i> Add filter
-                    </button>
+                    <div class="btn-group" role="group">
+                        <button id="btnAddFilter" type="button" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-plus"></i> Add filter
+                        </button>
+                        <button id="btnAddManagedFilter" type="button" class="btn btn-sm btn-outline-secondary" title="Add managed segment filter">
+                            <i class="fas fa-user-shield"></i> Add MS filter
+                        </button>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div id="filtersList"></div>
@@ -346,99 +351,354 @@
   bindPivotStyleEditors();
 
   function newFilterTemplate() {
+
     return {
+
       representation: 'filter', type: 'dropdown', param: '', label: '', query: '',
-      valueField: '', textField: '', default: '', placeholder: '', required: false
+
+      valueField: '', textField: '', default: '', placeholder: '', required: false,
+
+      managedSegment: false
+
     };
+
   }
+
+
+
+  const isManagedFilter = (filter) => {
+
+    const flag = filter && filter.managedSegment;
+
+    if (flag === true) return true;
+
+    if (flag === false) return false;
+
+    if (typeof flag === 'string') {
+
+      const lowered = flag.trim().toLowerCase();
+
+      return lowered === 'true' || lowered === '1' || lowered === 'yes';
+
+    }
+
+    if (typeof flag === 'number') return flag === 1;
+
+    return false;
+
+  };
+
+
+
+  function suggestManagedParamName(){
+
+    const base = 'managedSegment';
+
+    const existing = new Set((filters || []).map(f => (f?.param || '').toLowerCase()));
+
+    if (!existing.has(base)) return base;
+
+    let idx = 2;
+
+    while (existing.has(`${base}${idx}`)) idx++;
+
+    return `${base}${idx}`;
+
+  }
+
+
+
+  function managedLabelFromParam(param){
+
+    if (!param) return 'Managed segment';
+
+    const cleaned = param.replace(/[_\-]+/g, ' ').trim();
+
+    if (!cleaned) return 'Managed segment';
+
+    return cleaned.replace(/\w/g, ch => ch.toUpperCase());
+
+  }
+
+
+
+  function ensureManagedFilterDefaults(filter, overrides = {}) {
+
+    if (!filter) return filter;
+
+    filter.managedSegment = true;
+
+    filter.type = 'dropdown';
+
+    filter.valueField = 'value';
+
+    filter.textField = 'text';
+
+    filter.query = '';
+
+    filter.placeholder = '';
+
+    if (filter.default == null) filter.default = '';
+
+    filter.required = true;
+
+    if (overrides.param) filter.param = overrides.param;
+
+    else if (!filter.param) filter.param = 'managedSegment';
+
+    if (overrides.label) filter.label = overrides.label;
+
+    else if (!filter.label) filter.label = 'Managed segment';
+
+    return filter;
+
+  }
+
+
+
+  function createManagedFilter(){
+
+    const param = suggestManagedParamName();
+
+    const label = managedLabelFromParam(param);
+
+    return ensureManagedFilterDefaults(newFilterTemplate(), { param, label });
+
+  }
+
+
 
   function renderFiltersUI(){
+
     const list = document.getElementById('filtersList');
+
     const hint = document.getElementById('noFiltersHint');
+
     if (!list || !hint) return;
+
     list.innerHTML = '';
+
     if (!filters.length){ hint.style.display = 'block'; return; }
+
     hint.style.display = 'none';
-    filters.forEach((f, idx) => {
+
+    filters.forEach((filter, idx) => {
+
+      const managed = isManagedFilter(filter);
+
+      if (managed) ensureManagedFilterDefaults(filter);
+
       const wrap = document.createElement('div');
-      wrap.className = 'filter-item border rounded p-2 mb-2';
+
+      wrap.className = 'filter-item border rounded p-2 mb-2' + (managed ? ' managed-filter' : '');
+
       wrap.dataset.index = String(idx);
+
       wrap.innerHTML = `
+
         <div class="row g-2 align-items-end">
-          <div class="col-12 col-md-3"><label class="form-label">Type</label><select class="form-select filter-type"><option value="dropdown" ${f.type==='dropdown'?'selected':''}>dropdown</option></select></div>
-          <div class="col-12 col-md-3"><label class="form-label">Param</label><input type="text" class="form-control filter-param" placeholder="Country" value="${f.param||''}"></div>
-          <div class="col-12 col-md-3"><label class="form-label">Label</label><input type="text" class="form-control filter-label" placeholder="Country:" value="${f.label||''}"></div>
+
+          <div class="col-12 col-md-3"><label class="form-label">Type</label><select class="form-select filter-type"><option value="dropdown" ${filter.type==='dropdown'?'selected':''}>dropdown</option></select></div>
+
+          <div class="col-12 col-md-3"><label class="form-label">Param</label><input type="text" class="form-control filter-param" placeholder="Country" value="${filter.param||''}"></div>
+
+          <div class="col-12 col-md-3"><label class="form-label">Label</label><input type="text" class="form-control filter-label" placeholder="Country:" value="${filter.label||''}"></div>
+
           <div class="col-12 col-md-3 text-end"><button type="button" class="btn btn-outline-danger btn-filter-remove"><i class="fas fa-trash"></i></button></div>
-          <div class="col-12"><label class="form-label">Query</label><textarea rows="3" class="form-control filter-query" placeholder="SELECT DISTINCT ...">${(f.query||'').replace(/</g,'&lt;')}</textarea></div>
-          <div class="col-12 col-md-3"><label class="form-label">valueField</label><input type="text" class="form-control filter-valueField" placeholder="Code" value="${f.valueField||''}"></div>
-          <div class="col-12 col-md-3"><label class="form-label">textField</label><input type="text" class="form-control filter-textField" placeholder="Name" value="${f.textField||''}"></div>
+
+          <div class="col-12"><label class="form-label">Query</label><textarea rows="3" class="form-control filter-query" placeholder="SELECT DISTINCT ...">${(filter.query||'').replace(/</g,'&lt;')}</textarea></div>
+
+          <div class="col-12 col-md-3"><label class="form-label">valueField</label><input type="text" class="form-control filter-valueField" placeholder="Code" value="${filter.valueField||''}"></div>
+
+          <div class="col-12 col-md-3"><label class="form-label">textField</label><input type="text" class="form-control filter-textField" placeholder="Name" value="${filter.textField||''}"></div>
+
         </div>`;
+
       (function enhanceFilterItem(){
+
         const sel = wrap.querySelector('.filter-type');
+
         const ensureOpt = (val, text) => { if (!sel) return; if (![...sel.options].some(o => o.value === val)){ const o = document.createElement('option'); o.value = val; o.textContent = text; sel.appendChild(o); } };
+
         ensureOpt('text','text'); ensureOpt('datepicker','datepicker');
-        if (sel && f.type) sel.value = f.type;
-        const row = wrap.querySelector('.row');
-        if (row){
-          const mkCol = (html,cls='col-12 col-md-3') => { const d = document.createElement('div'); d.className=cls; d.innerHTML=html; return d; };
-          const colDef = mkCol('<label class="form-label">Default</label><input type="text" class="form-control filter-default" placeholder="Default value">');
-          const colPh  = mkCol('<label class="form-label">Placeholder</label><input type="text" class="form-control filter-placeholder" placeholder="Placeholder (text/date)">');
-          const colReq = mkCol('<div class="form-check mt-4"><input class="form-check-input filter-required" type="checkbox" id="tmp_'+(f.param||idx)+'"><label class="form-check-label" for="tmp_'+(f.param||idx)+'">Required</label></div>', 'col-12 col-md-3 d-flex align-items-center');
-          row.appendChild(colDef); row.appendChild(colPh); row.appendChild(colReq);
-          colDef.querySelector('.filter-default').value = f.default || '';
-          colPh.querySelector('.filter-placeholder').value = f.placeholder || '';
-          colReq.querySelector('.filter-required').checked = !!f.required;
+
+        if (sel){
+
+          sel.value = filter.type || 'dropdown';
+
+          if (managed){ sel.disabled = true; sel.value = 'dropdown'; }
+
         }
-        const toggleByType = () => {
-          const t = (sel?.value || 'dropdown');
+
+        const row = wrap.querySelector('.row');
+
+        if (row){
+
+          const mkCol = (html,cls='col-12 col-md-3') => { const d = document.createElement('div'); d.className=cls; d.innerHTML=html; return d; };
+
+          const colDef = mkCol('<label class="form-label">Default</label><input type="text" class="form-control filter-default" placeholder="Default value">');
+
+          const colPh  = mkCol('<label class="form-label">Placeholder</label><input type="text" class="form-control filter-placeholder" placeholder="Placeholder (text/date)">');
+
+          const colReq = mkCol('<div class="form-check mt-4"><input class="form-check-input filter-required" type="checkbox" id="tmp_'+(filter.param||idx)+'"><label class="form-check-label" for="tmp_'+(filter.param||idx)+'">Required</label></div>', 'col-12 col-md-3 d-flex align-items-center');
+
+          row.appendChild(colDef); row.appendChild(colPh); row.appendChild(colReq);
+
+
+
+          const defaultInput = colDef.querySelector('.filter-default');
+
+          if (defaultInput) defaultInput.value = filter.default || '';
+
+          const placeholderInput = colPh.querySelector('.filter-placeholder');
+
+          if (placeholderInput) placeholderInput.value = filter.placeholder || '';
+
+          const requiredInput = colReq.querySelector('.filter-required');
+
+          if (requiredInput) requiredInput.checked = !!filter.required;
+
+
+
           const disp = (show) => show ? '' : 'none';
-          const queryParent = wrap.querySelector('.filter-query')?.parentElement;
-          if (queryParent) queryParent.style.display = disp(t === 'dropdown');
 
-          const valueFieldParent = wrap.querySelector('.filter-valueField')?.parentElement;
-          if (valueFieldParent) valueFieldParent.style.display = disp(t === 'dropdown');
+          const toggleByType = () => {
 
-          const textFieldParent = wrap.querySelector('.filter-textField')?.parentElement;
-          if (textFieldParent) textFieldParent.style.display = disp(t === 'dropdown');
-          const phEl = wrap.querySelector('.filter-placeholder')?.closest('.col-12, .col-12 col-md-3') || wrap.querySelector('.filter-placeholder')?.parentElement;
-          if(phEl) phEl.style.display = disp(t!=='dropdown');
-        };
-        toggleByType();
-        if (sel){ sel.addEventListener('change', toggleByType); }
+            const t = sel?.value || 'dropdown';
+
+            const queryParent = wrap.querySelector('.filter-query')?.parentElement;
+
+            if (queryParent) queryParent.style.display = disp(t === 'dropdown');
+
+            const valueFieldParent = wrap.querySelector('.filter-valueField')?.parentElement;
+
+            if (valueFieldParent) valueFieldParent.style.display = disp(t === 'dropdown');
+
+            const textFieldParent = wrap.querySelector('.filter-textField')?.parentElement;
+
+            if (textFieldParent) textFieldParent.style.display = disp(t === 'dropdown');
+
+            const placeholderCol = placeholderInput?.parentElement;
+
+            if (placeholderCol) placeholderCol.style.display = disp(t !== 'dropdown');
+
+          };
+
+          toggleByType();
+
+          if (sel && !managed) sel.addEventListener('change', toggleByType);
+
+
+
+          if (managed){
+
+            const queryParent = wrap.querySelector('.filter-query')?.parentElement;
+
+            if (queryParent) queryParent.style.display = 'none';
+
+            const queryField = wrap.querySelector('.filter-query');
+
+            if (queryField) queryField.value = '';
+
+            const vf = wrap.querySelector('.filter-valueField');
+
+            if (vf){ vf.value = 'value'; vf.readOnly = true; vf.classList.add('bg-light'); }
+
+            const tf = wrap.querySelector('.filter-textField');
+
+            if (tf){ tf.value = 'text'; tf.readOnly = true; tf.classList.add('bg-light'); }
+
+            if (defaultInput){ defaultInput.readOnly = true; defaultInput.classList.add('bg-light'); defaultInput.parentElement.style.display = 'none'; }
+
+            if (placeholderInput){ placeholderInput.readOnly = true; placeholderInput.classList.add('bg-light'); placeholderInput.value = ''; placeholderInput.parentElement.style.display = 'none'; }
+
+            if (requiredInput){ requiredInput.checked = true; requiredInput.disabled = true; }
+
+            const info = document.createElement('div');
+
+            info.className = 'managed-filter-hint small text-muted mt-2';
+
+            info.innerHTML = '<i class="fas fa-user-shield me-1"></i> Options load from the user\'s managed AD groups.';
+
+            wrap.appendChild(info);
+
+          }
+
+        }
+
       })();
+
       list.appendChild(wrap);
+
+      if (managed) syncFilterFromDom(wrap);
+
     });
+
   }
+
+
 
   function syncFilterFromDom(item){
+
     const idx = parseInt(item.dataset.index, 10);
+
     if (isNaN(idx) || !filters[idx]) return;
+
     const f = filters[idx];
+
+    if (isManagedFilter(f)) ensureManagedFilterDefaults(f);
+
     f.type = item.querySelector('.filter-type')?.value || 'dropdown';
+
     f.param = item.querySelector('.filter-param')?.value || '';
+
     f.label = item.querySelector('.filter-label')?.value || '';
+
     f.query = item.querySelector('.filter-query')?.value || '';
+
     f.valueField = item.querySelector('.filter-valueField')?.value || '';
+
     f.textField = item.querySelector('.filter-textField')?.value || '';
+
     f.default = item.querySelector('.filter-default')?.value || '';
+
     f.placeholder = item.querySelector('.filter-placeholder')?.value || '';
+
     f.required = !!item.querySelector('.filter-required')?.checked;
+
   }
 
+
+
   (function bindFilterEditors(){
+
     const list = document.getElementById('filtersList');
+
     if (!list) return;
+
     list.addEventListener('input', (e) => { const item = e.target.closest('.filter-item'); if (item) syncFilterFromDom(item); });
+
     list.addEventListener('click', (e) => {
+
       const btn = e.target.closest('.btn-filter-remove');
+
       if (!btn) return;
+
       const idx = parseInt(btn.closest('.filter-item').dataset.index, 10);
+
       if (!isNaN(idx)) { filters.splice(idx,1); renderFiltersUI(); }
+
     });
+
     document.getElementById('btnAddFilter')?.addEventListener('click', () => { filters.push(newFilterTemplate()); renderFiltersUI(); });
+
+    document.getElementById('btnAddManagedFilter')?.addEventListener('click', () => { filters.push(createManagedFilter()); renderFiltersUI(); });
+
   })();
 
-  function escapeQuotes(s){ return (s||'').replace(/\\/g,'\\\\').replace(/"/g,'\\"'); }
+
+
+  function escapeQuotes(s){ return (s||'').replace(/\\/g,'\\\\').replace(/"/g,'\"'); }
 
   function extractFormattingContent(src){
     const match = /formatting\s*=\s*\{/i.exec(src);
@@ -543,12 +803,16 @@
         const key = kvMatch[1];
         const rawVal = kvMatch[2]
           .replace(/\\n/g,'\n')
-          .replace(/\\"/g,'"')
+          .replace(/\"/g,'"')
           .replace(/\\\\/g,'\\');
         if (key in obj || key === 'representation'){
           obj[key] = rawVal;
         }
       }
+      if (typeof obj.managedSegment === 'string') obj.managedSegment = /^(true|1|yes)$/i.test(obj.managedSegment);
+
+      if (isManagedFilter(obj)) ensureManagedFilterDefaults(obj);
+
       filters.push(obj);
     });
     renderFiltersUI();
@@ -557,7 +821,7 @@
     if (chartInner){
       success = true;
       const qMatch = chartInner.match(/query\s*=\s*(["'])([\s\S]*?)\1\s*;?/i);
-      if (qMatch) sqlQuery.value = qMatch[2].replace(/\\n/g,'\n').replace(/\\"/g,'"').replace(/\\\\/g,'\\');
+      if (qMatch) sqlQuery.value = qMatch[2].replace(/\\n/g,'\n').replace(/\"/g,'"').replace(/\\\\/g,'\\');
       const repMatch = chartInner.match(/representation\s*=\s*["']([^"']+)["']/i);
       representation.value = repMatch ? repMatch[1] : 'barchart';
 
@@ -575,7 +839,7 @@
       const formattingContent = extractFormattingContent(chartInner);
       if (formattingContent != null) {
           const content = formattingContent;
-          const unescape = s => s ? s.replace(/\\"/g, '"').replace(/\\\\/g, '\\') : '';
+          const unescape = s => s ? s.replace(/\"/g, '"').replace(/\\\\/g, '\\') : '';
 
           const titleMatch = content.match(/title\s*:\s*["'](.*?)["']/i);
           if (titleMatch) title.value = unescape(titleMatch[1]);
@@ -693,13 +957,16 @@
   }
 
   function buildFilterBlock(f){
+    const isManaged = isManagedFilter(f);
+    if (isManaged) ensureManagedFilterDefaults(f);
     const kv = [];
     const push = (k,v) => { if (v != null && String(v).length) kv.push(`  ${k}="${escapeQuotes(String(v))}";`); };
     push('representation', 'filter'); push('type', f.type || 'dropdown'); push('param', f.param || ''); push('label', f.label || '');
-    const qf = (f.query || '').replace(/\r/g,'');
+    const qf = isManaged ? '' : (f.query || '').replace(/\r/g,'');
     kv.push(`  query="\n${escapeQuotes(qf)}\n  ";`);
     push('valueField', f.valueField || ''); push('textField', f.textField || ''); push('default', f.default || ''); push('placeholder', f.placeholder || '');
     if (f.required) kv.push('  required="true";');
+    if (isManaged) kv.push('  managedSegment="true";');
     return `{{\n${kv.join('\n')}\n}}`;
   }
 
@@ -901,5 +1168,13 @@
         #sqlQuery { flex: 1 1 auto; width: 100%; height: 100%; min-height: 0; box-sizing: border-box; }
         /* Ensure SQL textarea shows ~12 lines by default and can be resized */
         #sqlQuery { height: auto !important; min-height: 12em; resize: vertical; }
+        .filter-item.managed-filter { border-color: #0d6efd; background-color: #f5f8ff; }
+
+        .filter-item.managed-filter .managed-filter-hint { color: #0d6efd; }
+
+        .filter-item.managed-filter .form-control[readonly] { background-color: #f8f9fa; }
+
     </style>
 }
+
+
