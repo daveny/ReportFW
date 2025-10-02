@@ -128,6 +128,7 @@
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
+    <Compile Include="Models\ManagedSegmentDebugViewModel.cs" />
     <Compile Include="Models\MetricController.cs" />
     <Compile Include="Models\MetricTile.cs" />
     <Compile Include="Models\ReportTile.cs" />
@@ -230,6 +231,7 @@
     <Content Include="Views\Metric\MyMetrics.cshtml" />
     <Content Include="Views\Metric\Display.cshtml" />
     <Content Include="Views\Editor\Index.cshtml" />
+    <Content Include="Views\Editor\ManagedSegmentDebug.cshtml" />
     <Content Include="Views\Metrics\Templates\metric02.thtml" />
     <Content Include="Views\Report\RenderReport.cshtml" />
     <Content Include="Views\Report\List.cshtml" />

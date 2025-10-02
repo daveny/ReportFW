@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Web.Mvc;
 using Core.Helpers;
+using Core.Models;
 
 namespace Core.Controllers
 {
@@ -125,7 +126,7 @@ namespace Core.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [ValidateInput(false)]
+        [ValidateInput(false)] // a .thtml tartalomban lehet HTML-szerű szöveg
         public ContentResult RenderPreview(string thtmlCode)
         {
             try
@@ -156,6 +157,42 @@ namespace Core.Controllers
                 var safe = System.Web.HttpUtility.HtmlEncode(ex.Message);
                 return Content($"<div class='alert alert-danger'>Error rendering preview: {safe}</div>", "text/html");
             }
+        }
+
+        [HttpGet]
+        public ActionResult ManagedSegmentDebug()
+        {
+            const string managedSegmentParam = "managedSegment";
+            var adminSeparators = new[] { ';', ',', '|' };
+
+            var pattern = ConfigurationManager.AppSettings["ManagedSegmentGroupPattern"] ?? @"EUR\app_eur_contar_*";
+            var adminRaw = ConfigurationManager.AppSettings["ManagedSegmentAdminGroups"] ?? string.Empty;
+
+            var adminGroups = adminRaw
+                .Split(adminSeparators, StringSplitOptions.RemoveEmptyEntries)
+                .Select(g => g.Trim())
+                .Where(g => !string.IsNullOrEmpty(g))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(g => g, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var info = ManagedSegmentHelper.GetManagedSegmentInfo();
+
+            var resolvedParameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var combinedValue = ManagedSegmentHelper.ResolveValue(resolvedParameters, managedSegmentParam, null, info) ?? string.Empty;
+            resolvedParameters.TryGetValue(managedSegmentParam + "_admin", out var adminFlag);
+
+            var model = new ManagedSegmentDebugViewModel
+            {
+                Pattern = pattern,
+                AdminGroups = adminGroups,
+                AllGroups = ManagedSegmentHelper.GetUserGroupNames(),
+                Info = info,
+                CombinedValue = combinedValue,
+                AdminFlag = string.IsNullOrWhiteSpace(adminFlag) ? "0" : adminFlag
+            };
+
+            return View("ManagedSegmentDebug", model);
         }
     }
 }

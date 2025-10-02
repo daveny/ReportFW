@@ -1,0 +1,88 @@
+﻿@model Core.Models.ManagedSegmentDebugViewModel
+@using Core.Helpers
+@using System.Collections.Generic
+@using System.Linq
+
+@{
+    ViewBag.Title = "Managed Segment Debug";
+    const string managedParamName = "managedSegment";
+    const string managedAdminParamName = managedParamName + "_admin";
+    var matchedValues = new HashSet<string>((Model.Info?.Segments ?? Enumerable.Empty<ManagedSegmentOption>()).Select(s => s.Value), StringComparer.OrdinalIgnoreCase);
+    var adminSet = new HashSet<string>(Model.AdminGroups ?? Enumerable.Empty<string>(), StringComparer.OrdinalIgnoreCase);
+}
+
+<div class="container my-4">
+    <h2 class="mb-4">Managed Segment Debug</h2>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <p><strong>Pattern:</strong> <code>@Model.Pattern</code></p>
+            <p><strong>Admin groups setting:</strong> @(adminSet.Count > 0 ? string.Join(", ", adminSet) : "(none)")</p>
+            <p><strong>Is admin:</strong> @(Model.Info?.IsAdmin == true ? "Yes" : "No")</p>
+            @if (Model.Info?.AdminOption != null)
+            {
+                <p><strong>Admin option value:</strong> <code>@Model.Info.AdminOption.Value</code></p>
+                <p><strong>Admin option label:</strong> <code>@Model.Info.AdminOption.Label</code></p>
+            }
+            <p><strong>Combined parameter value (<code>@managedParamName</code>):</strong> <code>@(string.IsNullOrEmpty(Model.CombinedValue) ? "(empty)" : Model.CombinedValue)</code></p>
+            <p><strong>Admin flag (<code>@managedAdminParamName</code>):</strong> <code>@Model.AdminFlag</code></p>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">Matched Segments</div>
+        <div class="card-body">
+            @if (Model.Info?.Segments != null && Model.Info.Segments.Any())
+            {
+                <ul class="mb-0">
+                    @foreach (var seg in Model.Info.Segments.OrderBy(s => s.Value, StringComparer.OrdinalIgnoreCase))
+                    {
+                        <li><code>@seg.Value</code> (@seg.Label)</li>
+                    }
+                </ul>
+            }
+            else
+            {
+                <p class="text-muted mb-0">No segments matched the current pattern.</p>
+            }
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">All AD Groups for @User.Identity.Name</div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm table-striped mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">Group</th>
+                            <th scope="col">Matches Pattern</th>
+                            <th scope="col">Listed as Admin</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.AllGroups != null && Model.AllGroups.Any())
+                        {
+                            foreach (var group in Model.AllGroups)
+                            {
+                                var isMatch = matchedValues.Contains(group);
+                                var isAdminGroup = adminSet.Contains(group);
+                                <tr class="@(isMatch ? "table-success" : string.Empty)">
+                                    <td><code>@group</code></td>
+                                    <td>@(isMatch ? "Yes" : "No")</td>
+                                    <td>@(isAdminGroup ? "Yes" : "No")</td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="3" class="text-muted">The current user has no AD group information available.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

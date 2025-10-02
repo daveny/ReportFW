@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
@@ -200,6 +200,38 @@ namespace Core.Helpers
             return distinct.Count > 0 ? string.Join(",", distinct) : string.Empty;
         }
 
+        public static IReadOnlyList<string> GetUserGroupNames(IPrincipal principal = null)
+        {
+            var identity = ResolveIdentity(principal ?? HttpContext.Current?.User ?? Thread.CurrentPrincipal);
+            var result = new List<string>();
+            if (identity?.Groups == null) return result;
+
+            foreach (var groupSid in identity.Groups)
+            {
+                string name = null;
+                try
+                {
+                    name = groupSid.Translate(typeof(NTAccount)).ToString();
+                }
+                catch (IdentityNotMappedException)
+                {
+                    continue;
+                }
+                catch (SystemException)
+                {
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(name))
+                    continue;
+
+                if (!result.Contains(name))
+                    result.Add(name);
+            }
+
+            result.Sort(StringComparer.OrdinalIgnoreCase);
+            return result;
+        }
         private static WindowsIdentity ResolveIdentity(IPrincipal principal)
         {
             if (principal is WindowsPrincipal wp && wp.Identity is WindowsIdentity wi)
@@ -246,3 +278,4 @@ namespace Core.Helpers
         }
     }
 }
+
