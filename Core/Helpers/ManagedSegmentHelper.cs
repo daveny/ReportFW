@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
+using System.DirectoryServices.AccountManagement;
 using System.Linq;
 using System.Security.Principal;
 using System.Threading;
@@ -58,7 +59,16 @@ namespace Core.Helpers
 
         public static ManagedSegmentInfo GetManagedSegmentInfo(IPrincipal principal = null)
         {
-            var targetPrincipal = principal ?? HttpContext.Current?.User ?? Thread.CurrentPrincipal;
+            return BuildManagedSegmentInfo(principal, null);
+        }
+
+        public static ManagedSegmentInfo GetManagedSegmentInfoForGroups(IEnumerable<string> groupNames)
+        {
+            return BuildManagedSegmentInfo(null, groupNames);
+        }
+
+        private static ManagedSegmentInfo BuildManagedSegmentInfo(IPrincipal principal, IEnumerable<string> overrideGroupNames)
+        {
             var pattern = ConfigurationManager.AppSettings["ManagedSegmentGroupPattern"] ?? @"EUR\app_eur_contar_*";
             var adminGroupsSetting = ConfigurationManager.AppSettings["ManagedSegmentAdminGroups"] ?? string.Empty;
             var adminLabel = ConfigurationManager.AppSettings["ManagedSegmentAdminLabel"] ?? "All segments (admin)";
@@ -73,40 +83,25 @@ namespace Core.Helpers
             var segments = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             bool isAdmin = false;
 
-            var identity = ResolveIdentity(targetPrincipal);
-            if (identity?.Groups != null)
+            var groupNames = overrideGroupNames ?? EnumerateGroupNamesFromPrincipal(principal ?? HttpContext.Current?.User ?? Thread.CurrentPrincipal);
+
+            foreach (var groupName in groupNames ?? Enumerable.Empty<string>())
             {
-                foreach (var groupSid in identity.Groups)
+                var normalized = groupName?.Trim();
+                if (string.IsNullOrWhiteSpace(normalized))
+                    continue;
+
+                if (MatchesPattern(normalized, pattern))
+                    segments.Add(normalized);
+
+                if (adminGroups.Count > 0)
                 {
-                    string name = null;
-                    try
-                    {
-                        name = groupSid.Translate(typeof(NTAccount)).ToString();
-                    }
-                    catch (IdentityNotMappedException)
-                    {
-                        continue;
-                    }
-                    catch (SystemException)
-                    {
-                        continue;
-                    }
-
-                    if (string.IsNullOrWhiteSpace(name))
-                        continue;
-
-                    if (MatchesPattern(name, pattern))
-                        segments.Add(name);
-
-                    if (adminGroups.Count > 0)
-                    {
-                        if (adminGroups.Contains(name))
-                            isAdmin = true;
-                    }
-                    else if (IsDefaultAdminGroup(name))
-                    {
+                    if (adminGroups.Contains(normalized))
                         isAdmin = true;
-                    }
+                }
+                else if (IsDefaultAdminGroup(normalized))
+                {
+                    isAdmin = true;
                 }
             }
 
@@ -202,9 +197,33 @@ namespace Core.Helpers
 
         public static IReadOnlyList<string> GetUserGroupNames(IPrincipal principal = null)
         {
-            var identity = ResolveIdentity(principal ?? HttpContext.Current?.User ?? Thread.CurrentPrincipal);
-            var result = new List<string>();
-            if (identity?.Groups == null) return result;
+            var targetPrincipal = principal ?? HttpContext.Current?.User ?? Thread.CurrentPrincipal;
+            var names = EnumerateGroupNamesFromPrincipal(targetPrincipal)
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            return names;
+        }
+
+        public static IReadOnlyList<string> GetUserGroupNames(string accountName, out string errorMessage)
+        {
+            errorMessage = null;
+            if (string.IsNullOrWhiteSpace(accountName))
+            {
+                return GetUserGroupNames();
+            }
+
+            var domainOverride = ConfigurationManager.AppSettings["ManagedSegmentDirectoryDomain"];
+            return LookupGroupNamesForAccount(accountName.Trim(), domainOverride, out errorMessage);
+        }
+
+        private static IEnumerable<string> EnumerateGroupNamesFromPrincipal(IPrincipal principal)
+        {
+            var identity = ResolveIdentity(principal);
+            if (identity?.Groups == null)
+                yield break;
 
             foreach (var groupSid in identity.Groups)
             {
@@ -222,16 +241,115 @@ namespace Core.Helpers
                     continue;
                 }
 
-                if (string.IsNullOrWhiteSpace(name))
-                    continue;
+                if (!string.IsNullOrWhiteSpace(name))
+                    yield return name;
+            }
+        }
 
-                if (!result.Contains(name))
-                    result.Add(name);
+        private static IReadOnlyList<string> LookupGroupNamesForAccount(string accountName, string domainOverride, out string errorMessage)
+        {
+            errorMessage = null;
+            var groups = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            PrincipalContext context = null;
+
+            try
+            {
+                var identityInfo = ParseAccountIdentity(accountName, domainOverride);
+                var domain = identityInfo.domain ?? domainOverride;
+
+                context = !string.IsNullOrWhiteSpace(domain)
+                    ? new PrincipalContext(ContextType.Domain, domain)
+                    : new PrincipalContext(ContextType.Domain);
+
+                using (var user = UserPrincipal.FindByIdentity(context, identityInfo.type, identityInfo.value))
+                {
+                    if (user == null)
+                    {
+                        errorMessage = $"User '{accountName}' was not found in directory.";
+                        return new List<string>();
+                    }
+
+                    using (var authorizationGroups = user.GetAuthorizationGroups())
+                    {
+                        foreach (var principal in authorizationGroups)
+                        {
+                            if (principal?.Sid == null)
+                                continue;
+
+                            string groupName = null;
+                            try
+                            {
+                                groupName = principal.Sid.Translate(typeof(NTAccount)).ToString();
+                            }
+                            catch (IdentityNotMappedException)
+                            {
+                                continue;
+                            }
+                            catch (SystemException)
+                            {
+                                continue;
+                            }
+
+                            if (!string.IsNullOrWhiteSpace(groupName))
+                                groups.Add(groupName);
+                        }
+                    }
+                }
+            }
+            catch (PrincipalServerDownException ex)
+            {
+                errorMessage = ex.Message;
+            }
+            catch (PrincipalOperationException ex)
+            {
+                errorMessage = ex.Message;
+            }
+            catch (Exception ex)
+            {
+                errorMessage = ex.Message;
+            }
+            finally
+            {
+                context?.Dispose();
             }
 
-            result.Sort(StringComparer.OrdinalIgnoreCase);
-            return result;
+            return groups.OrderBy(name => name, StringComparer.OrdinalIgnoreCase).ToList();
         }
+
+        private static (IdentityType type, string value, string domain) ParseAccountIdentity(string accountName, string domainOverride)
+        {
+            if (string.IsNullOrWhiteSpace(accountName))
+                return (IdentityType.SamAccountName, string.Empty, domainOverride);
+
+            var trimmed = accountName.Trim();
+
+            if (!string.IsNullOrWhiteSpace(domainOverride))
+            {
+                var lastSeparator = trimmed.LastIndexOf('\\');
+                var normalized = lastSeparator >= 0 && lastSeparator < trimmed.Length - 1
+                    ? trimmed.Substring(lastSeparator + 1)
+                    : trimmed;
+                return (IdentityType.SamAccountName, normalized, domainOverride);
+            }
+
+            var atIndex = trimmed.IndexOf('@');
+            if (atIndex > 0 && atIndex < trimmed.Length - 1)
+            {
+                var domain = trimmed.Substring(atIndex + 1);
+                return (IdentityType.UserPrincipalName, trimmed, domain);
+            }
+
+            var slashIndex = trimmed.IndexOf('\\');
+            if (slashIndex > -1 && slashIndex < trimmed.Length - 1)
+            {
+                var domain = trimmed.Substring(0, slashIndex);
+                var value = trimmed.Substring(slashIndex + 1);
+                return (IdentityType.SamAccountName, value, domain);
+            }
+
+            return (IdentityType.SamAccountName, trimmed, domainOverride);
+        }
+
         private static WindowsIdentity ResolveIdentity(IPrincipal principal)
         {
             if (principal is WindowsPrincipal wp && wp.Identity is WindowsIdentity wi)

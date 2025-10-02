@@ -160,7 +160,7 @@ namespace Core.Controllers
         }
 
         [HttpGet]
-        public ActionResult ManagedSegmentDebug()
+        public ActionResult ManagedSegmentDebug(string viewAs = null)
         {
             const string managedSegmentParam = "managedSegment";
             var adminSeparators = new[] { ';', ',', '|' };
@@ -176,7 +176,23 @@ namespace Core.Controllers
                 .OrderBy(g => g, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            var info = ManagedSegmentHelper.GetManagedSegmentInfo();
+            var signedInAccount = User?.Identity?.Name ?? string.Empty;
+            var trimmedViewAs = string.IsNullOrWhiteSpace(viewAs) ? null : viewAs.Trim();
+
+            string lookupError = null;
+            IReadOnlyList<string> groupNames;
+            ManagedSegmentInfo info;
+
+            if (string.IsNullOrWhiteSpace(trimmedViewAs))
+            {
+                groupNames = ManagedSegmentHelper.GetUserGroupNames();
+                info = ManagedSegmentHelper.GetManagedSegmentInfo();
+            }
+            else
+            {
+                groupNames = ManagedSegmentHelper.GetUserGroupNames(trimmedViewAs, out lookupError);
+                info = ManagedSegmentHelper.GetManagedSegmentInfoForGroups(groupNames);
+            }
 
             var resolvedParameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             var combinedValue = ManagedSegmentHelper.ResolveValue(resolvedParameters, managedSegmentParam, null, info) ?? string.Empty;
@@ -186,10 +202,14 @@ namespace Core.Controllers
             {
                 Pattern = pattern,
                 AdminGroups = adminGroups,
-                AllGroups = ManagedSegmentHelper.GetUserGroupNames(),
+                AllGroups = groupNames,
                 Info = info,
                 CombinedValue = combinedValue,
-                AdminFlag = string.IsNullOrWhiteSpace(adminFlag) ? "0" : adminFlag
+                AdminFlag = string.IsNullOrWhiteSpace(adminFlag) ? "0" : adminFlag,
+                LookupAccountName = trimmedViewAs ?? string.Empty,
+                EffectiveAccountName = string.IsNullOrWhiteSpace(trimmedViewAs) ? signedInAccount : trimmedViewAs,
+                SignedInAccountName = signedInAccount,
+                LookupError = lookupError
             };
 
             return View("ManagedSegmentDebug", model);

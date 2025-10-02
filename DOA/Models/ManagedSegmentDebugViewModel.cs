@@ -11,5 +11,10 @@ namespace Core.Models
         public ManagedSegmentInfo Info { get; set; }
         public string CombinedValue { get; set; }
         public string AdminFlag { get; set; }
+        public string LookupAccountName { get; set; }
+        public string EffectiveAccountName { get; set; }
+        public string SignedInAccountName { get; set; }
+        public string LookupError { get; set; }
+        public bool IsImpersonating => !string.IsNullOrWhiteSpace(LookupAccountName);
     }
 }

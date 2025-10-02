@@ -9,10 +9,36 @@
     const string managedAdminParamName = managedParamName + "_admin";
     var matchedValues = new HashSet<string>((Model.Info?.Segments ?? Enumerable.Empty<ManagedSegmentOption>()).Select(s => s.Value), StringComparer.OrdinalIgnoreCase);
     var adminSet = new HashSet<string>(Model.AdminGroups ?? Enumerable.Empty<string>(), StringComparer.OrdinalIgnoreCase);
+    var effectiveAccount = string.IsNullOrWhiteSpace(Model.EffectiveAccountName) ? Model.SignedInAccountName : Model.EffectiveAccountName;
 }
 
 <div class="container my-4">
     <h2 class="mb-4">Managed Segment Debug</h2>
+
+    <form method="get" class="mb-3">
+        <div class="row g-2 align-items-end">
+            <div class="col-sm-6 col-md-4">
+                <label for="viewAs" class="form-label">View as</label>
+                <input type="text" class="form-control" id="viewAs" name="viewAs" value="@Model.LookupAccountName" placeholder="DOMAIN\\user or user@domain.com" />
+                <div class="form-text">Leave empty to use the signed-in account.</div>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary">Refresh</button>
+            </div>
+        </div>
+    </form>
+
+    <div class="mb-3">
+        <span class="badge bg-secondary me-2">Signed in: @(string.IsNullOrWhiteSpace(Model.SignedInAccountName) ? "(unknown)" : Model.SignedInAccountName)</span>
+        <span class="badge @(Model.IsImpersonating ? "bg-info text-dark" : "bg-success")">Viewing as: @(string.IsNullOrWhiteSpace(effectiveAccount) ? "(unknown)" : effectiveAccount)</span>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model.LookupError))
+    {
+        <div class="alert alert-warning" role="alert">
+            <strong>Directory lookup warning:</strong> @Model.LookupError
+        </div>
+    }
 
     <div class="card mb-4">
         <div class="card-body">
