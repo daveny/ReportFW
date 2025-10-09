@@ -47,6 +47,8 @@ namespace Core.Helpers
     public static class ManagedSegmentHelper
     {
         private static readonly char[] Separator = { ';', ',', '|' };
+        private const string ViewAsAccountSessionKey = "ManagedSegment.ViewAsAccount";
+        private const string ViewAsGroupsSessionKey = "ManagedSegment.ViewAsGroups";
 
         public static bool IsTruthy(string value)
         {
@@ -57,17 +59,95 @@ namespace Core.Helpers
                 || lowered.Equals("yes", StringComparison.OrdinalIgnoreCase);
         }
 
-        public static ManagedSegmentInfo GetManagedSegmentInfo(IPrincipal principal = null)
+        public static ManagedSegmentInfo GetManagedSegmentInfo(IPrincipal principal = null, bool allowViewAsOverride = true)
         {
-            return BuildManagedSegmentInfo(principal, null);
+            return BuildManagedSegmentInfo(principal, null, allowViewAsOverride);
         }
 
         public static ManagedSegmentInfo GetManagedSegmentInfoForGroups(IEnumerable<string> groupNames)
         {
-            return BuildManagedSegmentInfo(null, groupNames);
+            return BuildManagedSegmentInfo(null, groupNames, allowViewAsOverride: false);
         }
 
-        private static ManagedSegmentInfo BuildManagedSegmentInfo(IPrincipal principal, IEnumerable<string> overrideGroupNames)
+        public static bool IsAdmin(IPrincipal principal = null)
+        {
+            return GetManagedSegmentInfo(principal, allowViewAsOverride: false)?.IsAdmin == true;
+        }
+
+        public static string GetViewAsAccount()
+        {
+            var session = HttpContext.Current?.Session;
+            if (session == null) return null;
+
+            var account = session[ViewAsAccountSessionKey] as string;
+            return string.IsNullOrWhiteSpace(account) ? null : account;
+        }
+
+        public static IReadOnlyList<string> GetViewAsGroups()
+        {
+            var groups = GetViewAsGroupsInternal();
+            return groups ?? Array.Empty<string>();
+        }
+
+        public static void SetViewAsOverride(string accountName, IEnumerable<string> groupNames)
+        {
+            var session = HttpContext.Current?.Session;
+            if (session == null) return;
+
+            var normalizedGroups = groupNames?
+                .Where(g => !string.IsNullOrWhiteSpace(g))
+                .Select(g => g.Trim())
+                .Where(g => !string.IsNullOrEmpty(g))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(g => g, StringComparer.OrdinalIgnoreCase)
+                .ToArray() ?? Array.Empty<string>();
+
+            session[ViewAsGroupsSessionKey] = normalizedGroups;
+
+            if (string.IsNullOrWhiteSpace(accountName))
+                session.Remove(ViewAsAccountSessionKey);
+            else
+                session[ViewAsAccountSessionKey] = accountName.Trim();
+        }
+
+        public static void ClearViewAsOverride()
+        {
+            var session = HttpContext.Current?.Session;
+            if (session == null) return;
+
+            session.Remove(ViewAsAccountSessionKey);
+            session.Remove(ViewAsGroupsSessionKey);
+        }
+
+        private static IEnumerable<string> ResolveGroupNames(IPrincipal principal, IEnumerable<string> explicitGroupNames, bool allowViewAsOverride)
+        {
+            if (explicitGroupNames != null)
+                return explicitGroupNames;
+
+            if (allowViewAsOverride)
+            {
+                var overrideGroups = GetViewAsGroupsInternal();
+                if (overrideGroups != null)
+                    return overrideGroups;
+            }
+
+            var effectivePrincipal = principal ?? HttpContext.Current?.User ?? Thread.CurrentPrincipal;
+            return EnumerateGroupNamesFromPrincipal(effectivePrincipal) ?? Enumerable.Empty<string>();
+        }
+
+        private static string[] GetViewAsGroupsInternal()
+        {
+            var session = HttpContext.Current?.Session;
+            if (session == null)
+                return null;
+
+            if (session[ViewAsGroupsSessionKey] is string[] groups)
+                return groups;
+
+            return null;
+        }
+
+        private static ManagedSegmentInfo BuildManagedSegmentInfo(IPrincipal principal, IEnumerable<string> overrideGroupNames, bool allowViewAsOverride)
         {
             var pattern = ConfigurationManager.AppSettings["ManagedSegmentGroupPattern"] ?? @"EUR\app_eur_contar_*";
             var adminGroupsSetting = ConfigurationManager.AppSettings["ManagedSegmentAdminGroups"] ?? string.Empty;
@@ -83,9 +163,9 @@ namespace Core.Helpers
             var segments = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             bool isAdmin = false;
 
-            var groupNames = overrideGroupNames ?? EnumerateGroupNamesFromPrincipal(principal ?? HttpContext.Current?.User ?? Thread.CurrentPrincipal);
+            var groupNames = ResolveGroupNames(principal, overrideGroupNames, allowViewAsOverride);
 
-            foreach (var groupName in groupNames ?? Enumerable.Empty<string>())
+            foreach (var groupName in groupNames)
             {
                 var normalized = groupName?.Trim();
                 if (string.IsNullOrWhiteSpace(normalized))

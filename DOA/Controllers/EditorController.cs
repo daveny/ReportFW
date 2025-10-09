@@ -178,6 +178,9 @@ namespace Core.Controllers
 
             var signedInAccount = User?.Identity?.Name ?? string.Empty;
             var trimmedViewAs = string.IsNullOrWhiteSpace(viewAs) ? null : viewAs.Trim();
+            var activeOverrideAccount = ManagedSegmentHelper.GetViewAsAccount();
+            var activeOverrideGroups = ManagedSegmentHelper.GetViewAsGroups();
+            var overrideActive = !string.IsNullOrWhiteSpace(activeOverrideAccount) || (activeOverrideGroups?.Count ?? 0) > 0;
 
             string lookupError = null;
             IReadOnlyList<string> groupNames;
@@ -185,8 +188,8 @@ namespace Core.Controllers
 
             if (string.IsNullOrWhiteSpace(trimmedViewAs))
             {
-                groupNames = ManagedSegmentHelper.GetUserGroupNames();
                 info = ManagedSegmentHelper.GetManagedSegmentInfo();
+                groupNames = overrideActive ? activeOverrideGroups : ManagedSegmentHelper.GetUserGroupNames(User);
             }
             else
             {
@@ -202,12 +205,14 @@ namespace Core.Controllers
             {
                 Pattern = pattern,
                 AdminGroups = adminGroups,
-                AllGroups = groupNames,
+                AllGroups = groupNames ?? Array.Empty<string>(),
                 Info = info,
                 CombinedValue = combinedValue,
                 AdminFlag = string.IsNullOrWhiteSpace(adminFlag) ? "0" : adminFlag,
-                LookupAccountName = trimmedViewAs ?? string.Empty,
-                EffectiveAccountName = string.IsNullOrWhiteSpace(trimmedViewAs) ? signedInAccount : trimmedViewAs,
+                LookupAccountName = trimmedViewAs ?? activeOverrideAccount ?? string.Empty,
+                EffectiveAccountName = string.IsNullOrWhiteSpace(trimmedViewAs)
+                    ? (overrideActive ? activeOverrideAccount : signedInAccount)
+                    : trimmedViewAs,
                 SignedInAccountName = signedInAccount,
                 LookupError = lookupError
             };
