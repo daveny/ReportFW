@@ -238,7 +238,6 @@
     <Content Include="Views\Metric\Display.cshtml" />
     <Content Include="Views\Editor\Index.cshtml" />
     <Content Include="Views\Editor\ManagedSegmentDebug.cshtml" />
-    <Content Include="Views\Metrics\Templates\metric02.thtml" />
     <Content Include="Views\Report\RenderReport.cshtml" />
     <Content Include="Views\Report\List.cshtml" />
     <Content Include="webfonts\fa-brands-400.svg" />
