@@ -1,13 +1,38 @@
-﻿<!DOCTYPE html>
+﻿@model System.Web.Mvc.HandleErrorInfo
+<!DOCTYPE html>
 <html>
 <head>
     <meta name="viewport" content="width=device-width" />
     <title>Error</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .error-details { background: #f8d7da; border: 1px solid #f5c6cb; padding: 15px; margin-top: 20px; border-radius: 5px; }
+        pre { background: #fff; padding: 10px; overflow: auto; max-height: 400px; }
+    </style>
 </head>
 <body>
     <hgroup>
         <h1>Error.</h1>
         <h2>An error occurred while processing your request.</h2>
     </hgroup>
+    
+    @if (Model != null && Model.Exception != null)
+    {
+        <div class="error-details">
+            <h3>Error Details (Debug Mode)</h3>
+            <p><strong>Controller:</strong> @Model.ControllerName</p>
+            <p><strong>Action:</strong> @Model.ActionName</p>
+            <p><strong>Exception Type:</strong> @Model.Exception.GetType().FullName</p>
+            <p><strong>Message:</strong> @Model.Exception.Message</p>
+            
+            @if (Model.Exception.InnerException != null)
+            {
+                <p><strong>Inner Exception:</strong> @Model.Exception.InnerException.Message</p>
+            }
+            
+            <h4>Stack Trace:</h4>
+            <pre>@Model.Exception.StackTrace</pre>
+        </div>
+    }
 </body>
 </html>

@@ -9,13 +9,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@ViewBag.Title - My ASP.NET Application</title>
 
-    <!-- CSS references -->
-    @Styles.Render("~/Content/css")
+    <!-- CSS references - direct links instead of bundling for better IIS compatibility -->
+    <link href="~/Content/bootstrap.min.css" rel="stylesheet" />
+    <link href="~/Content/Site.css" rel="stylesheet" />
     <link href="~/Content/datatables.min.css" rel="stylesheet" />
     <link href="~/Content/bootstrap-datepicker.min.css" rel="stylesheet" />
     <link href="~/Content/all.min.css" rel="stylesheet" />
     <link href="~/Content/css/filters.css" rel="stylesheet" />
-
 
     @RenderSection("styles", required: false)
 
